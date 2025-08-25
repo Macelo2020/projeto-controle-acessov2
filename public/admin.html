@@ -3,27 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administração - Controle de Acesso</title>
+    <title>Painel de Administração</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
 </head>
 <body>
     <div class="container">
         <h1>Painel de Administração</h1>
         <p>Apenas usuários autorizados podem acessar esta página.</p>
 
-        <hr>
+        <div class="section">
+            <h2>Relatório Diário</h2>
+            <button id="btnGerarRelatorio">Gerar Relatório</button>
+            <button id="btnBaixarRelatorio">Baixar Relatório</button>
+        </div>
 
-        <h2>Relatório Diário</h2>
-        <button id="btnGerarRelatorio">Gerar e Salvar Relatório</button>
-        <div id="relatorio"></div>
-
-        <hr>
-
-        <h2>Manutenção do Relatório</h2>
-        <button id="btnZerarRelatorio">Zerar Relatório Diário</button>
-        <p id="mensagemZerarRelatorio"></p>
+        <pre id="relatorioTexto"></pre>
+        <div id="mensagemRelatorio"></div>
     </div>
-
     <script src="admin.js"></script>
 </body>
 </html>

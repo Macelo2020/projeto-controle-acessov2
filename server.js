@@ -2,6 +2,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const cron = require('node-cron'); // Importa a biblioteca node-cron
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +46,7 @@ function lerDadosDoCSV(nomeDoArquivo) {
 // Lógica de Log e Relatório
 // ----------------------------------------------------
 const arquivoDeLog = 'acessos.log';
+const pastaRelatorios = 'relatorios';
 
 function registrarAcesso(matricula, nome, status) {
     const dataHora = new Date().toISOString();
@@ -55,6 +57,9 @@ function registrarAcesso(matricula, nome, status) {
 // Função para verificar se a matrícula já foi usada hoje
 function jaAcessouHoje(matricula) {
     try {
+        if (!fs.existsSync(arquivoDeLog)) {
+            return false;
+        }
         const conteudoDoLog = fs.readFileSync(arquivoDeLog, 'utf8');
         const registros = conteudoDoLog.trim().split('\n');
         const dataDeHoje = new Date().toISOString().split('T')[0];
@@ -64,13 +69,82 @@ function jaAcessouHoje(matricula) {
             registro.includes(matricula) && registro.startsWith(dataDeHoje) && registro.includes('Status: concedido')
         );
     } catch (erro) {
-        // Se o arquivo não existe, a matrícula ainda não foi usada
         return false;
     }
 }
 
+// Função para gerar o relatório em formato de string
+function gerarRelatorio() {
+    try {
+        let conteudoDoLog = '';
+        if (fs.existsSync(arquivoDeLog)) {
+            conteudoDoLog = fs.readFileSync(arquivoDeLog, 'utf8');
+        }
+        
+        const registros = conteudoDoLog.trim().split('\n');
+        const dataDeHoje = new Date().toISOString().split('T')[0];
+        const registrosDeHoje = registros.filter(reg => reg.startsWith(dataDeHoje));
+        
+        let acessosConcedidos = 0;
+        let matriculasNegadas = [];
+        
+        registrosDeHoje.forEach(registro => {
+            if (registro.includes('Status: concedido')) {
+                acessosConcedidos++;
+            } else if (registro.includes('Status: negado')) {
+                const match = registro.match(/Matrícula: (\d+)/);
+                if (match && match[1]) {
+                    const matriculaNegada = match[1];
+                    matriculasNegadas.push(matriculaNegada);
+                }
+            }
+        });
+
+        const relatorio = `
+Relatório Diário - ${dataDeHoje}
+----------------------------------
+Total de Solicitações: ${registrosDeHoje.length}
+Acessos Concedidos: ${acessosConcedidos}
+Matrículas Negadas: ${matriculasNegadas.join(', ')}
+----------------------------------
+`;
+
+        return relatorio;
+
+    } catch (erro) {
+        return `Erro ao gerar o relatório: ${erro.message}`;
+    }
+}
+
 // ----------------------------------------------------
-// Rotas da API (o que o navegador vai chamar)
+// Agendamento para Salvar o Relatório e Zera-lo (Cron Job)
+// ----------------------------------------------------
+// Agenda para executar a cada dia à 00:00 (meia-noite)
+// O fuso horário do Render é UTC
+cron.schedule('0 0 * * *', () => {
+    console.log('Executando tarefa agendada: salvando e zerando relatório.');
+    
+    // 1. Salva o relatório
+    const relatorio = gerarRelatorio();
+    const nomeDoArquivo = `relatorio-diario-${new Date().toISOString().split('T')[0]}.txt`;
+    const caminhoDoArquivo = path.join(__dirname, pastaRelatorios, nomeDoArquivo);
+
+    if (!fs.existsSync(path.join(__dirname, pastaRelatorios))) {
+        fs.mkdirSync(path.join(__dirname, pastaRelatorios));
+    }
+    fs.writeFileSync(caminhoDoArquivo, relatorio, 'utf8');
+    console.log(`Relatório salvo em: ${caminhoDoArquivo}`);
+
+    // 2. Zera o arquivo de log
+    fs.writeFileSync(arquivoDeLog, '', 'utf8');
+    console.log('Arquivo de log zerado.');
+
+}, {
+    timezone: "America/Sao_Paulo" // Defina o fuso horário para Brasil
+});
+
+// ----------------------------------------------------
+// Rotas da API
 // ----------------------------------------------------
 
 // Rota POST para verificar a matrícula
@@ -91,54 +165,37 @@ app.post('/verificar-acesso', (req, res) => {
         return;
     }
 
-    // Se tudo estiver certo, registra o acesso e concede
     registrarAcesso(matricula, funcionario.nome, 'concedido');
     res.status(200).json({ mensagem: 'Acesso concedido. Bem-vindo, ', nome: funcionario.nome, status: 'aprovado' });
 });
 
-// Rota GET para gerar o relatório diário (atualizada para mostrar nomes)
+// Rota GET para gerar o relatório diário
 app.get('/relatorio-diario', (req, res) => {
-    try {
-        let registrosDeHoje = [];
-        
-        // CORREÇÃO: Verifica se o arquivo de log existe antes de tentar ler
-        if (fs.existsSync(arquivoDeLog)) {
-            const conteudoDoLog = fs.readFileSync(arquivoDeLog, 'utf8');
-            const registros = conteudoDoLog.trim().split('\n');
-            const dataDeHoje = new Date().toISOString().split('T')[0];
-            registrosDeHoje = registros.filter(reg => reg.startsWith(dataDeHoje));
-        }
+    const relatorio = gerarRelatorio();
+    res.status(200).send(relatorio); // Envia o relatório como texto
+});
 
-        let acessosConcedidos = 0;
-        let matriculasNegadas = [];
-        
-        registrosDeHoje.forEach(registro => {
-            if (registro.includes('Status: concedido')) {
-                acessosConcedidos++;
-            } else if (registro.includes('Status: negado')) {
-                const match = registro.match(/Matrícula: (\d+)/);
-                if (match && match[1]) {
-                    const matriculaNegada = match[1];
-                    matriculasNegadas.push(matriculaNegada);
-                }
+// Rota GET para baixar o relatório diário mais recente
+app.get('/baixar-relatorio', (req, res) => {
+    const dataDeHoje = new Date().toISOString().split('T')[0];
+    const nomeDoArquivo = `relatorio-diario-${dataDeHoje}.txt`;
+    const caminhoDoArquivo = path.join(__dirname, pastaRelatorios, nomeDoArquivo);
+
+    if (fs.existsSync(caminhoDoArquivo)) {
+        res.download(caminhoDoArquivo, nomeDoArquivo, (erro) => {
+            if (erro) {
+                console.error("Erro ao baixar o arquivo:", erro);
+                res.status(500).send("Erro ao tentar baixar o relatório.");
             }
         });
-
-        const relatorio = {
-            totalSolicitacoes: registrosDeHoje.length,
-            acessosConcedidos,
-            matriculasNegadas
-        };
-
-        res.status(200).json(relatorio);
-
-    } catch (erro) {
-        res.status(500).json({ erro: `Erro ao gerar o relatório: ${erro.message}` });
+    } else {
+        res.status(404).send("Relatório não encontrado. Certifique-se de que o relatório de hoje foi salvo.");
     }
 });
 
-// Rota GET para zerar o relatório diário
-app.get('/zerar-relatorio', (req, res) => {
+
+// Rota GET para zerar o relatório manualmente (sem botão na tela)
+app.get('/api/zerar-relatorio', (req, res) => {
     try {
         fs.writeFileSync(arquivoDeLog, '', 'utf8');
         res.status(200).json({ mensagem: 'Relatório diário zerado com sucesso!' });
@@ -149,20 +206,6 @@ app.get('/zerar-relatorio', (req, res) => {
     }
 });
 
-// Rota POST para salvar o relatório em um arquivo
-app.post('/salvar-relatorio', (req, res) => {
-    const { relatorio } = req.body;
-    const nomeDoArquivo = `relatorio-diario-${new Date().toISOString().split('T')[0]}.txt`;
-    const caminhoDoArquivo = path.join(__dirname, 'relatorios', nomeDoArquivo);
-
-    // Garante que a pasta 'relatorios' existe
-    if (!fs.existsSync(path.join(__dirname, 'relatorios'))) {
-        fs.mkdirSync(path.join(__dirname, 'relatorios'));
-    }
-
-    fs.writeFileSync(caminhoDoArquivo, relatorio, 'utf8');
-    res.status(200).json({ mensagem: 'Relatório salvo com sucesso!' });
-});
 
 // Inicia o servidor e o faz "escutar" por requisições na porta especificada
 app.listen(PORT, () => {
