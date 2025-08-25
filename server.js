@@ -99,11 +99,16 @@ app.post('/verificar-acesso', (req, res) => {
 // Rota GET para gerar o relatório diário (atualizada para mostrar nomes)
 app.get('/relatorio-diario', (req, res) => {
     try {
-        const conteudoDoLog = fs.readFileSync(arquivoDeLog, 'utf8');
-        const registros = conteudoDoLog.trim().split('\n');
-        const dataDeHoje = new Date().toISOString().split('T')[0];
-        const registrosDeHoje = registros.filter(reg => reg.startsWith(dataDeHoje));
+        let registrosDeHoje = [];
         
+        // CORREÇÃO: Verifica se o arquivo de log existe antes de tentar ler
+        if (fs.existsSync(arquivoDeLog)) {
+            const conteudoDoLog = fs.readFileSync(arquivoDeLog, 'utf8');
+            const registros = conteudoDoLog.trim().split('\n');
+            const dataDeHoje = new Date().toISOString().split('T')[0];
+            registrosDeHoje = registros.filter(reg => reg.startsWith(dataDeHoje));
+        }
+
         let acessosConcedidos = 0;
         let matriculasNegadas = [];
         
@@ -111,7 +116,6 @@ app.get('/relatorio-diario', (req, res) => {
             if (registro.includes('Status: concedido')) {
                 acessosConcedidos++;
             } else if (registro.includes('Status: negado')) {
-                // CORREÇÃO APLICADA AQUI
                 const match = registro.match(/Matrícula: (\d+)/);
                 if (match && match[1]) {
                     const matriculaNegada = match[1];
