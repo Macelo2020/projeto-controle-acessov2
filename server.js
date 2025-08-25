@@ -23,15 +23,18 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ----------------------------------------------------
-// Lógica de Leitura de Matrículas
+// Lógica de Leitura de Matrículas e Nomes
 // ----------------------------------------------------
-function lerMatriculasDoCSV(nomeDoArquivo) {
+function lerDadosDoCSV(nomeDoArquivo) {
     const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
     try {
         const conteudo = fs.readFileSync(caminhoDoArquivo, 'utf8');
         const linhas = conteudo.trim().split('\n');
-        linhas.shift();
-        return linhas.map(linha => linha.trim());
+        linhas.shift(); // Remove o cabeçalho
+        return linhas.map(linha => {
+            const [matricula, nome] = linha.split(',');
+            return { matricula: matricula.trim(), nome: nome.trim() };
+        });
     } catch (erro) {
         console.error(`Erro ao ler o arquivo CSV: ${erro.message}`);
         return [];
@@ -43,10 +46,27 @@ function lerMatriculasDoCSV(nomeDoArquivo) {
 // ----------------------------------------------------
 const arquivoDeLog = 'acessos.log';
 
-function registrarAcesso(matricula, status) {
+function registrarAcesso(matricula, nome, status) {
     const dataHora = new Date().toISOString();
-    const registro = `${dataHora} - Matrícula: ${matricula} - Status: ${status}\n`;
+    const registro = `${dataHora} - Matrícula: ${matricula} - Nome: ${nome} - Status: ${status}\n`;
     fs.appendFileSync(arquivoDeLog, registro, 'utf8');
+}
+
+// Função para verificar se a matrícula já foi usada hoje
+function jaAcessouHoje(matricula) {
+    try {
+        const conteudoDoLog = fs.readFileSync(arquivoDeLog, 'utf8');
+        const registros = conteudoDoLog.trim().split('\n');
+        const dataDeHoje = new Date().toISOString().split('T')[0];
+        
+        // Verifica se existe algum registro com a matrícula e a data de hoje
+        return registros.some(registro => 
+            registro.includes(matricula) && registro.startsWith(dataDeHoje) && registro.includes('Status: concedido')
+        );
+    } catch (erro) {
+        // Se o arquivo não existe, a matrícula ainda não foi usada
+        return false;
+    }
 }
 
 // ----------------------------------------------------
@@ -56,20 +76,27 @@ function registrarAcesso(matricula, status) {
 // Rota POST para verificar a matrícula
 app.post('/verificar-acesso', (req, res) => {
     const { matricula } = req.body;
-    const listaDeMatriculasPermitidas = lerMatriculasDoCSV('matriculas.csv');
-    const acessoConcedido = listaDeMatriculasPermitidas.includes(matricula);
-    const status = acessoConcedido ? 'concedido' : 'negado';
+    const listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
+    const funcionario = listaDeFuncionarios.find(f => f.matricula === matricula);
 
-    registrarAcesso(matricula, status);
-
-    if (acessoConcedido) {
-        res.status(200).json({ mensagem: 'Acesso concedido', status: 'aprovado' });
-    } else {
-        res.status(401).json({ mensagem: 'Acesso negado', status: 'negado' });
+    if (!funcionario) {
+        registrarAcesso(matricula, 'Desconhecido', 'negado');
+        res.status(401).json({ mensagem: 'Acesso negado. Matrícula não encontrada.' });
+        return;
     }
+
+    if (jaAcessouHoje(matricula)) {
+        registrarAcesso(matricula, funcionario.nome, 'negado (acesso duplicado)');
+        res.status(403).json({ mensagem: `${funcionario.nome}, você já verificou seu acesso hoje.` });
+        return;
+    }
+
+    // Se tudo estiver certo, registra o acesso e concede
+    registrarAcesso(matricula, funcionario.nome, 'concedido');
+    res.status(200).json({ mensagem: 'Acesso concedido. Bem-vindo, ', nome: funcionario.nome, status: 'aprovado' });
 });
 
-// Rota GET para gerar o relatório diário
+// Rota GET para gerar o relatório diário (atualizada para mostrar nomes)
 app.get('/relatorio-diario', (req, res) => {
     try {
         const conteudoDoLog = fs.readFileSync(arquivoDeLog, 'utf8');
@@ -84,8 +111,12 @@ app.get('/relatorio-diario', (req, res) => {
             if (registro.includes('Status: concedido')) {
                 acessosConcedidos++;
             } else if (registro.includes('Status: negado')) {
-                const matriculaNegada = registro.match(/Matrícula: (\d+)/)[1];
-                matriculasNegadas.push(matriculaNegada);
+                // CORREÇÃO APLICADA AQUI
+                const match = registro.match(/Matrícula: (\d+)/);
+                if (match && match[1]) {
+                    const matriculaNegada = match[1];
+                    matriculasNegadas.push(matriculaNegada);
+                }
             }
         });
 
