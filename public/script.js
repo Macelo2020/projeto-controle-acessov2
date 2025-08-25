@@ -30,12 +30,14 @@ document.getElementById('btnVerificar').addEventListener('click', async () => {
         };
 
         if (dados.status === 'aprovado') {
+            // Se o status for aprovado, exibe o nome do funcionário
             mensagemElement.innerHTML = `
                 <p>${dados.mensagem} ${dados.nome}</p>
                 ${formatarDataHora()}
             `;
             mensagemElement.style.color = 'green';
         } else {
+            // Se o status for negado, apenas a mensagem é exibida
             mensagemElement.innerHTML = `
                 <p>${dados.mensagem}</p>
                 ${formatarDataHora()}
