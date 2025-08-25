@@ -36,7 +36,7 @@ function lerDadosDoCSV(nomeDoArquivo) {
         const linhas = conteudo.trim().split('\n');
         linhas.shift(); // Remove o cabeçalho
         return linhas.map(linha => {
-            const [matricula, nome] = linha.split(',');
+            const [matricula, nome] = linha.split(';'); // <-- CORREÇÃO: Mudei a vírgula (',') para ponto e vírgula (';')
             return { matricula: matricula.trim(), nome: nome.trim() };
         });
     } catch (erro) {
