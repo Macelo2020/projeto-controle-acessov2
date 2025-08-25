@@ -2,10 +2,13 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const cron = require('node-cron'); // Importa a biblioteca node-cron
+const cron = require('node-cron'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Senha para a rota de administração
+const SENHA_ADMIN_ZERAR = 'adm@123'; // *** Mude esta senha para algo seguro ***
 
 // Rota para a página do funcionário (página inicial)
 app.get('/', (req, res) => {
@@ -64,7 +67,6 @@ function jaAcessouHoje(matricula) {
         const registros = conteudoDoLog.trim().split('\n');
         const dataDeHoje = new Date().toISOString().split('T')[0];
         
-        // Verifica se existe algum registro com a matrícula e a data de hoje
         return registros.some(registro => 
             registro.includes(matricula) && registro.startsWith(dataDeHoje) && registro.includes('Status: concedido')
         );
@@ -119,12 +121,9 @@ Matrículas Negadas: ${matriculasNegadas.join(', ')}
 // ----------------------------------------------------
 // Agendamento para Salvar o Relatório e Zera-lo (Cron Job)
 // ----------------------------------------------------
-// Agenda para executar a cada dia à 00:00 (meia-noite)
-// O fuso horário do Render é UTC
 cron.schedule('0 0 * * *', () => {
     console.log('Executando tarefa agendada: salvando e zerando relatório.');
     
-    // 1. Salva o relatório
     const relatorio = gerarRelatorio();
     const nomeDoArquivo = `relatorio-diario-${new Date().toISOString().split('T')[0]}.txt`;
     const caminhoDoArquivo = path.join(__dirname, pastaRelatorios, nomeDoArquivo);
@@ -135,12 +134,11 @@ cron.schedule('0 0 * * *', () => {
     fs.writeFileSync(caminhoDoArquivo, relatorio, 'utf8');
     console.log(`Relatório salvo em: ${caminhoDoArquivo}`);
 
-    // 2. Zera o arquivo de log
     fs.writeFileSync(arquivoDeLog, '', 'utf8');
     console.log('Arquivo de log zerado.');
 
 }, {
-    timezone: "America/Sao_Paulo" // Defina o fuso horário para Brasil
+    timezone: "America/Sao_Paulo"
 });
 
 // ----------------------------------------------------
@@ -172,7 +170,7 @@ app.post('/verificar-acesso', (req, res) => {
 // Rota GET para gerar o relatório diário
 app.get('/relatorio-diario', (req, res) => {
     const relatorio = gerarRelatorio();
-    res.status(200).send(relatorio); // Envia o relatório como texto
+    res.status(200).send(relatorio);
 });
 
 // Rota GET para baixar o relatório diário mais recente
@@ -193,15 +191,20 @@ app.get('/baixar-relatorio', (req, res) => {
     }
 });
 
+// Rota de acesso exclusivo para zerar o relatório
+app.get('/admin2/zerar', (req, res) => {
+    const { senha } = req.query; // Pega a senha da URL
+    
+    if (senha !== SENHA_ADMIN_ZERAR) {
+        return res.status(401).send("Acesso negado. Senha incorreta.");
+    }
 
-// Rota GET para zerar o relatório manualmente (sem botão na tela)
-app.get('/api/zerar-relatorio', (req, res) => {
     try {
         fs.writeFileSync(arquivoDeLog, '', 'utf8');
-        res.status(200).json({ mensagem: 'Relatório diário zerado com sucesso!' });
-        console.log('Relatório diário zerado com sucesso.');
+        res.status(200).send('Relatório diário zerado com sucesso!');
+        console.log('Relatório diário zerado por acesso manual.');
     } catch (erro) {
-        res.status(500).json({ erro: `Erro ao zerar o relatório: ${erro.message}` });
+        res.status(500).send(`Erro ao zerar o relatório: ${erro.message}`);
         console.error(`Erro ao zerar o relatório: ${erro.message}`);
     }
 });
