@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
 const mongoose = require('mongoose');
+const cors = require('cors'); // Adicionado o módulo CORS
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,13 +59,17 @@ mongoose.connect(dbURI)
     process.exit(1);
   });
 
+// ----------------------------------------------------
+// Middleware
+// ----------------------------------------------------
+app.use(express.static('public'));
+app.use(express.json());
+app.use(cors()); // Habilita o CORS para todas as rotas
+
 
 // ----------------------------------------------------
 // Rotas da API
 // ----------------------------------------------------
-
-// Serve arquivos estáticos da pasta 'public'
-app.use(express.static('public'));
 
 // Rota para a página do funcionário (página inicial)
 app.get('/', (req, res) => {
@@ -75,9 +80,6 @@ app.get('/', (req, res) => {
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
-
-// Permite que o servidor processe dados JSON no corpo da requisição
-app.use(express.json());
 
 // ----------------------------------------------------
 // Lógica de Log e Relatório (Usando arquivos, que não é o ideal para o Render)
