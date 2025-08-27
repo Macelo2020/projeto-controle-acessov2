@@ -223,4 +223,42 @@ app.get('/baixar-relatorio', (req, res) => {
     fs.writeFileSync(caminhoDoArquivo, relatorio, 'utf8');
 
     if (fs.existsSync(caminhoDoArquivo)) {
-        res.download(caminhoDoArquivo, nome
+        res.download(caminhoDoArquivo, nomeDoArquivo, (erro) => {
+            if (erro) {
+                console.error("Erro ao baixar o arquivo:", erro);
+                res.status(500).send("Erro ao tentar baixar o relatório.");
+            }
+        });
+    } else {
+        // Esta mensagem de erro agora só aparecerá em casos muito raros
+        res.status(404).send("Relatório não encontrado. Verifique os logs do servidor.");
+    }
+});
+
+// Rota de acesso exclusivo para zerar o relatório
+app.get('/admin2/zerar', (req, res) => {
+    const { senha } = req.query;
+    
+    if (senha !== SENHA_ADMIN_ZERAR) {
+        return res.status(401).send("Acesso negado. Senha incorreta.");
+    }
+
+    try {
+        // Primeiro, gera e salva o relatório antes de zerar o log
+        const relatorio = gerarRelatorio();
+        const nomeDoArquivo = `relatorio-diario-${new Date().toISOString().split('T')[0]}.txt`;
+        const caminhoDoArquivo = path.join(__dirname, pastaRelatorios, nomeDoArquivo);
+        if (!fs.existsSync(path.join(__dirname, pastaRelatorios))) {
+            fs.mkdirSync(path.join(__dirname, pastaRelatorios));
+        }
+        fs.writeFileSync(caminhoDoArquivo, relatorio, 'utf8');
+
+        // Em seguida, zera o arquivo de log para o próximo dia
+        fs.writeFileSync(arquivoDeLog, '', 'utf8');
+        res.status(200).send('Relatório diário salvo e log zerado com sucesso!');
+        console.log('Relatório diário salvo e zerado por acesso manual.');
+    } catch (erro) {
+        res.status(500).send(`Erro ao zerar o relatório: ${erro.message}`);
+        console.error(`Erro ao zerar o relatório: ${erro.message}`);
+    }
+});
