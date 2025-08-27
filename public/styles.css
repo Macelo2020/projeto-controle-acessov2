@@ -1,93 +1,93 @@
+/* Estilos gerais */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
-    color: #333;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    flex-direction: column;
+    background-color: #f0f2f5;
+    position: relative; /* Necessário para posicionar o container */
 }
 
 .container {
     background-color: #fff;
-    padding: 2em;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 90%;
-    max-width: 500px;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     text-align: center;
-    margin-bottom: 2em;
+    width: 100%;
+    max-width: 400px;
+    z-index: 1; /* Para garantir que o conteúdo fique acima da imagem */
+    position: relative; /* Para que o z-index funcione */
 }
 
-h1, h2 {
-    color: #4CAF50;
+/* Estilo para a imagem de fundo */
+.background-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Faz a imagem cobrir toda a área */
+    opacity: 0.2; /* Deixa a imagem um pouco transparente para não atrapalhar a leitura */
+    z-index: -1; /* Envia a imagem para trás do conteúdo */
+    border-radius: 10px; /* Adapta a borda do container */
+}
+
+h1 {
+    color: #28a745;
+    margin-bottom: 20px;
+}
+
+p {
+    color: #555;
+    margin-bottom: 25px;
 }
 
 input[type="text"] {
-    width: calc(100% - 22px);
-    padding: 10px;
-    margin: 10px 0;
+    width: calc(100% - 20px);
+    padding: 12px 10px;
+    margin-bottom: 20px;
     border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
+    border-radius: 5px;
+    font-size: 16px;
 }
 
 button {
-    background-color: #4CAF50;
+    background-color: #28a745;
     color: white;
     padding: 12px 20px;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    margin-top: 10px;
     transition: background-color 0.3s ease;
 }
 
 button:hover {
-    background-color: #45a049;
+    background-color: #218838;
 }
 
-#mensagemStatus {
-    margin-top: 1em;
-    font-weight: bold;
+/* Estilos para a área de mensagem */
+.message-area {
+    margin-top: 25px;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 18px; /* Aumenta o tamanho da fonte */
+    font-weight: bold; /* Deixa em destaque */
+    line-height: 1.5;
+    word-wrap: break-word; /* Garante que o texto se ajuste */
 }
 
-#mensagemStatus[style*="green"] {
+.message-area.success {
+    background-color: #e6ffe6;
     color: #28a745;
+    border: 1px solid #28a745;
 }
 
-#mensagemStatus[style*="red"] {
+.message-area.error {
+    background-color: #ffe6e6;
     color: #dc3545;
-}
-
-#relatorio {
-    margin-top: 1.5em;
-    padding: 1em;
-    background-color: #e9ecef;
-    border-radius: 4px;
-    text-align: left;
-}
-
-#btnZerarRelatorio {
-    background-color: #dc3545;
-}
-
-#btnZerarRelatorio:hover {
-    background-color: #c82333;
-}
-
-#mensagemZerarRelatorio {
-    margin-top: 1em;
-    font-weight: bold;
-}
-
-#mensagemZerarRelatorio[style*="green"] {
-    color: #28a745;
-}
-
-#mensagemZerarRelatorio[style*="red"] {
-    color: #dc3545;
+    border: 1px solid #dc3545;
 }

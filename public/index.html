@@ -1,20 +1,25 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verificação de Acesso</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Verificação de Acesso</h1>
-        <p>Digite sua matrícula para verificar o acesso:</p>
+        <div class="header">
+            <img src="images/refeitorio-background.jpg" alt="Fundo de Refeitório" class="background-image">
+            <h1>Verificação de Acesso</h1>
+            <p>Digite sua matrícula para verificar o acesso:</p>
+        </div>
         
-        <input type="text" id="inputMatricula" placeholder="Digite a matrícula">
-        <button id="btnVerificar">Verificar Acesso</button>
+        <form id="acessoForm">
+            <input type="text" id="matricula" placeholder="Digite sua matrícula" required>
+            <button type="submit">Verificar Acesso</button>
+        </form>
         
-        <p id="mensagemStatus"></p>
+        <div id="mensagem" class="message-area"></div>
     </div>
 
     <script src="script.js"></script>
