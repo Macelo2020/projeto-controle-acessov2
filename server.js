@@ -3,13 +3,13 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
-const mongoose = require('mongoose'); // <-- Importado para a conexão com o MongoDB
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Senha para a rota de administração
-const SENHA_ADMIN_ZERAR = 'adm@123'; // *** Mude esta senha para algo seguro ***
+const SENHA_ADMIN_ZERAR = 'adm@123';
 
 // ----------------------------------------------------
 // Conexão com o MongoDB
@@ -55,7 +55,6 @@ mongoose.connect(dbURI)
   })
   .catch((err) => {
     console.error('Erro de conexão com o MongoDB:', err);
-    // Adicione a lógica para sair da aplicação caso a conexão falhe
     process.exit(1);
   });
 
@@ -183,7 +182,6 @@ cron.schedule('0 0 * * *', () => {
 // Rota POST para verificar a matrícula
 app.post('/verificar-acesso', (req, res) => {
     const { matricula } = req.body;
-    const listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
     const funcionario = listaDeFuncionarios.find(f => f.matricula === matricula);
 
     if (!funcionario) {
@@ -228,7 +226,7 @@ app.get('/baixar-relatorio', (req, res) => {
 
 // Rota de acesso exclusivo para zerar o relatório
 app.get('/admin2/zerar', (req, res) => {
-    const { senha } = req.query; // Pega a senha da URL
+    const { senha } = req.query;
     
     if (senha !== SENHA_ADMIN_ZERAR) {
         return res.status(401).send("Acesso negado. Senha incorreta.");
