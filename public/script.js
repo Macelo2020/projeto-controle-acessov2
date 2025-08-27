@@ -1,5 +1,3 @@
-script 270825
-
 document.getElementById('btnVerificar').addEventListener('click', async () => {
     const matricula = document.getElementById('inputMatricula').value;
     const mensagemElement = document.getElementById('mensagemStatus');
