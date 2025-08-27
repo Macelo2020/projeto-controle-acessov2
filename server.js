@@ -12,6 +12,32 @@ const PORT = process.env.PORT || 3000;
 const SENHA_ADMIN_ZERAR = 'adm@123';
 
 // ----------------------------------------------------
+// Lógica de Leitura de Matrículas e Nomes
+// ----------------------------------------------------
+let listaDeFuncionarios = [];
+
+function lerDadosDoCSV(nomeDoArquivo) {
+  const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
+  try {
+    const conteudo = fs.readFileSync(caminhoDoArquivo, 'utf8');
+    const linhas = conteudo.trim().split('\n');
+    linhas.shift(); // Remove o cabeçalho
+    return linhas.map(linha => {
+      const [matricula, nome] = linha.split(';');
+      return { matricula: matricula.trim(), nome: nome.trim() };
+    });
+  } catch (erro) {
+    console.error(`Erro ao ler o arquivo CSV: ${erro.message}`);
+    return [];
+  }
+}
+
+// Carrega as matrículas do arquivo CSV imediatamente ao iniciar o servidor
+listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
+console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
+
+
+// ----------------------------------------------------
 // Conexão com o MongoDB
 // ----------------------------------------------------
 const dbURI = process.env.MONGODB_URI;
@@ -20,31 +46,6 @@ mongoose.connect(dbURI)
   .then(() => {
     console.log('Conexão com o MongoDB estabelecida!');
     
-    // ----------------------------------------------------
-    // Lógica de Leitura de Matrículas e Nomes
-    // ----------------------------------------------------
-    let listaDeFuncionarios = [];
-    
-    function lerDadosDoCSV(nomeDoArquivo) {
-      const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
-      try {
-        const conteudo = fs.readFileSync(caminhoDoArquivo, 'utf8');
-        const linhas = conteudo.trim().split('\n');
-        linhas.shift(); // Remove o cabeçalho
-        return linhas.map(linha => {
-          const [matricula, nome] = linha.split(';');
-          return { matricula: matricula.trim(), nome: nome.trim() };
-        });
-      } catch (erro) {
-        console.error(`Erro ao ler o arquivo CSV: ${erro.message}`);
-        return [];
-      }
-    }
-    
-    // Carrega as matrículas do arquivo CSV
-    listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
-    console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
-
     // ----------------------------------------------------
     // Inicia o Servidor (apenas se a conexão com o MongoDB for bem-sucedida)
     // ----------------------------------------------------
@@ -80,7 +81,7 @@ app.get('/admin', (req, res) => {
 app.use(express.json());
 
 // ----------------------------------------------------
-// Lógica de Log e Relatório (Usando arquivos, que não é o ideal para o Render)
+// Lógica de Log e Relatório (Usando arquivos)
 // ----------------------------------------------------
 const arquivoDeLog = 'acessos.log';
 const pastaRelatorios = 'relatorios';
@@ -222,42 +223,4 @@ app.get('/baixar-relatorio', (req, res) => {
     fs.writeFileSync(caminhoDoArquivo, relatorio, 'utf8');
 
     if (fs.existsSync(caminhoDoArquivo)) {
-        res.download(caminhoDoArquivo, nomeDoArquivo, (erro) => {
-            if (erro) {
-                console.error("Erro ao baixar o arquivo:", erro);
-                res.status(500).send("Erro ao tentar baixar o relatório.");
-            }
-        });
-    } else {
-        // Esta mensagem de erro agora só aparecerá em casos muito raros
-        res.status(404).send("Relatório não encontrado. Verifique os logs do servidor.");
-    }
-});
-
-// Rota de acesso exclusivo para zerar o relatório
-app.get('/admin2/zerar', (req, res) => {
-    const { senha } = req.query;
-    
-    if (senha !== SENHA_ADMIN_ZERAR) {
-        return res.status(401).send("Acesso negado. Senha incorreta.");
-    }
-
-    try {
-        // Primeiro, gera e salva o relatório antes de zerar o log
-        const relatorio = gerarRelatorio();
-        const nomeDoArquivo = `relatorio-diario-${new Date().toISOString().split('T')[0]}.txt`;
-        const caminhoDoArquivo = path.join(__dirname, pastaRelatorios, nomeDoArquivo);
-        if (!fs.existsSync(path.join(__dirname, pastaRelatorios))) {
-            fs.mkdirSync(path.join(__dirname, pastaRelatorios));
-        }
-        fs.writeFileSync(caminhoDoArquivo, relatorio, 'utf8');
-
-        // Em seguida, zera o arquivo de log para o próximo dia
-        fs.writeFileSync(arquivoDeLog, '', 'utf8');
-        res.status(200).send('Relatório diário salvo e log zerado com sucesso!');
-        console.log('Relatório diário salvo e zerado por acesso manual.');
-    } catch (erro) {
-        res.status(500).send(`Erro ao zerar o relatório: ${erro.message}`);
-        console.error(`Erro ao zerar o relatório: ${erro.message}`);
-    }
-});
+        res.download(caminhoDoArquivo, nome
