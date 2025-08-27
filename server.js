@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 const SENHA_ADMIN_ZERAR = 'adm@123';
 
 // ----------------------------------------------------
-// Lógica de Leitura de Matrículas e Nomes (MOVIDA PARA O TOPO)
+// Lógica de Leitura de Matrículas e Nomes
 // ----------------------------------------------------
 let listaDeFuncionarios = [];
 
@@ -43,10 +43,6 @@ const dbURI = process.env.MONGODB_URI;
 mongoose.connect(dbURI)
     .then(() => {
         console.log('Conexão com o MongoDB estabelecida!');
-
-        // ----------------------------------------------------
-        // Inicia o Servidor (apenas se a conexão com o MongoDB for bem-sucedida)
-        // ----------------------------------------------------
         app.listen(PORT, () => {
             console.log(`Servidor rodando em http://localhost:${PORT}`);
         });
@@ -70,7 +66,7 @@ const acessoSchema = new mongoose.Schema({
 const Acesso = mongoose.model('Acesso', acessoSchema);
 
 // ----------------------------------------------------
-// Funções de Lógica (AGORA USANDO O MONGODB)
+// Funções de Lógica
 // ----------------------------------------------------
 
 // Função para registrar acesso no MongoDB
@@ -108,21 +104,22 @@ async function jaAcessouHoje(matricula) {
     }
 }
 
-// Função para gerar o relatório em formato de string (do MongoDB)
-async function gerarRelatorio() {
+// Função para gerar o relatório em formato de string (do MongoDB), agora com um parâmetro de data
+async function gerarRelatorio(dataParaRelatorio) {
     try {
-        const dataDeHoje = new Date().toISOString().split('T')[0];
-        const inicioDoDia = new Date(`${dataDeHoje}T00:00:00Z`);
-        const fimDoDia = new Date(`${dataDeHoje}T23:59:59Z`);
+        const data = dataParaRelatorio ? new Date(dataParaRelatorio) : new Date();
+        const dataString = data.toISOString().split('T')[0];
+        const inicioDoDia = new Date(`${dataString}T00:00:00Z`);
+        const fimDoDia = new Date(`${dataString}T23:59:59Z`);
 
-        const registrosDeHoje = await Acesso.find({
+        const registrosDoDia = await Acesso.find({
             dataHora: { $gte: inicioDoDia, $lte: fimDoDia }
         });
 
         let acessosConcedidos = 0;
         let matriculasNegadas = [];
 
-        registrosDeHoje.forEach(registro => {
+        registrosDoDia.forEach(registro => {
             if (registro.status === 'concedido') {
                 acessosConcedidos++;
             } else if (registro.status === 'negado' || registro.status.includes('duplicado')) {
@@ -131,9 +128,9 @@ async function gerarRelatorio() {
         });
 
         const relatorio = `
-Relatório Diário - ${dataDeHoje}
+Relatório Diário - ${dataString}
 ----------------------------------
-Total de Solicitações: ${registrosDeHoje.length}
+Total de Solicitações: ${registrosDoDia.length}
 Acessos Concedidos: ${acessosConcedidos}
 Matrículas Negadas: ${matriculasNegadas.join(', ')}
 ----------------------------------
@@ -189,17 +186,19 @@ app.post('/verificar-acesso', async (req, res) => {
 
 // Rota GET para gerar o relatório diário
 app.get('/relatorio-diario', async (req, res) => {
-    const relatorio = await gerarRelatorio();
+    const dataParaRelatorio = req.query.data;
+    const relatorio = await gerarRelatorio(dataParaRelatorio);
     res.status(200).send(relatorio);
 });
 
-// Rota GET para baixar o relatório diário mais recente
+// Rota GET para baixar o relatório diário
 app.get('/baixar-relatorio', async (req, res) => {
-    const dataDeHoje = new Date().toISOString().split('T')[0];
-    const nomeDoArquivo = `relatorio-diario-${dataDeHoje}.txt`;
+    const dataParaRelatorio = req.query.data;
+    const dataString = dataParaRelatorio || new Date().toISOString().split('T')[0];
+    const nomeDoArquivo = `relatorio-diario-${dataString}.txt`;
     const caminhoDoArquivo = path.join(__dirname, 'relatorios', nomeDoArquivo);
 
-    const relatorio = await gerarRelatorio();
+    const relatorio = await gerarRelatorio(dataParaRelatorio);
     const pastaRelatorios = path.join(__dirname, 'relatorios');
 
     if (!fs.existsSync(pastaRelatorios)) {
