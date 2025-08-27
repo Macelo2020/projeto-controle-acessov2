@@ -11,51 +11,51 @@ const PORT = process.env.PORT || 3000;
 const SENHA_ADMIN_ZERAR = 'adm@123';
 
 // ----------------------------------------------------
+// Lógica de Leitura de Matrículas e Nomes (MOVIDA PARA O TOPO)
+// ----------------------------------------------------
+let listaDeFuncionarios = [];
+
+function lerDadosDoCSV(nomeDoArquivo) {
+    const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
+    try {
+        const conteudo = fs.readFileSync(caminhoDoArquivo, 'utf8');
+        const linhas = conteudo.trim().split('\n');
+        linhas.shift(); // Remove o cabeçalho
+        return linhas.map(linha => {
+            const [matricula, nome] = linha.split(';');
+            return { matricula: matricula.trim(), nome: nome.trim() };
+        });
+    } catch (erro) {
+        console.error(`Erro ao ler o arquivo CSV: ${erro.message}`);
+        return [];
+    }
+}
+
+// Carrega as matrículas do arquivo CSV no escopo global
+listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
+console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
+
+// ----------------------------------------------------
 // Conexão com o MongoDB
 // ----------------------------------------------------
 const dbURI = process.env.MONGODB_URI;
 
 mongoose.connect(dbURI)
-  .then(() => {
-    console.log('Conexão com o MongoDB estabelecida!');
-    
-    // ----------------------------------------------------
-    // Lógica de Leitura de Matrículas e Nomes
-    // ----------------------------------------------------
-    let listaDeFuncionarios = [];
-    
-    function lerDadosDoCSV(nomeDoArquivo) {
-      const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
-      try {
-        const conteudo = fs.readFileSync(caminhoDoArquivo, 'utf8');
-        const linhas = conteudo.trim().split('\n');
-        linhas.shift(); // Remove o cabeçalho
-        return linhas.map(linha => {
-          const [matricula, nome] = linha.split(';');
-          return { matricula: matricula.trim(), nome: nome.trim() };
+    .then(() => {
+        console.log('Conexão com o MongoDB estabelecida!');
+
+        // ----------------------------------------------------
+        // Inicia o Servidor (apenas se a conexão com o MongoDB for bem-sucedida)
+        // ----------------------------------------------------
+        app.listen(PORT, () => {
+            console.log(`Servidor rodando em http://localhost:${PORT}`);
         });
-      } catch (erro) {
-        console.error(`Erro ao ler o arquivo CSV: ${erro.message}`);
-        return [];
-      }
-    }
-    
-    // Carrega as matrículas do arquivo CSV
-    listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
-    console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
 
-    // ----------------------------------------------------
-    // Inicia o Servidor (apenas se a conexão com o MongoDB for bem-sucedida)
-    // ----------------------------------------------------
-    app.listen(PORT, () => {
-      console.log(`Servidor rodando em http://localhost:${PORT}`);
+    })
+    .catch((err) => {
+        console.error('Erro de conexão com o MongoDB:', err);
+        process.exit(1);
     });
-
-  })
-  .catch((err) => {
-    console.error('Erro de conexão com o MongoDB:', err);
-    process.exit(1);
-  });
 
 // ----------------------------------------------------
 // Schema e Modelo do MongoDB para Acessos
@@ -94,7 +94,7 @@ async function jaAcessouHoje(matricula) {
     const dataDeHoje = new Date().toISOString().split('T')[0];
     const inicioDoDia = new Date(`${dataDeHoje}T00:00:00Z`);
     const fimDoDia = new Date(`${dataDeHoje}T23:59:59Z`);
-    
+
     try {
         const acessoExistente = await Acesso.findOne({
             matricula: matricula,
@@ -114,14 +114,14 @@ async function gerarRelatorio() {
         const dataDeHoje = new Date().toISOString().split('T')[0];
         const inicioDoDia = new Date(`${dataDeHoje}T00:00:00Z`);
         const fimDoDia = new Date(`${dataDeHoje}T23:59:59Z`);
-        
+
         const registrosDeHoje = await Acesso.find({
             dataHora: { $gte: inicioDoDia, $lte: fimDoDia }
         });
-        
+
         let acessosConcedidos = 0;
         let matriculasNegadas = [];
-        
+
         registrosDeHoje.forEach(registro => {
             if (registro.status === 'concedido') {
                 acessosConcedidos++;
@@ -222,7 +222,7 @@ app.get('/baixar-relatorio', async (req, res) => {
 // Rota de acesso exclusivo para zerar o relatório (limpa a coleção no MongoDB)
 app.get('/admin2/zerar', async (req, res) => {
     const { senha } = req.query;
-    
+
     if (senha !== SENHA_ADMIN_ZERAR) {
         return res.status(401).send("Acesso negado. Senha incorreta.");
     }
