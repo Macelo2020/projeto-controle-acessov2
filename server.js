@@ -1,174 +1,105 @@
-
 // Importa os módulos necessários
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
-const mongoose = require('mongoose'); // <-- NOVO: Importa o Mongoose
+const mongoose = require('mongoose'); // <-- Adicionado para a conexão com o MongoDB
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Conecta ao banco de dados MongoDB
-mongoose.connect(process.env.MONGODB_URI) // <-- USA A VARIÁVEL DE AMBIENTE DO RENDER
-    .then(() => console.log('Conectado ao MongoDB.'))
-    .catch(err => console.error('Erro de conexão ao MongoDB:', err));
-
-// Define o esquema (schema) do registro de acesso
-const AcessoSchema = new mongoose.Schema({
-    matricula: String,
-    nome: String,
-    status: String,
-    dataHora: { type: Date, default: Date.now }
-});
-
-const Acesso = mongoose.model('Acesso', AcessoSchema);
-
-// Serve arquivos estáticos da pasta 'public'
-app.use(express.static('public'));
-app.use(express.json());
-
-const SENHA_ADMIN_ZERAR = process.env.SENHA_ADMIN_ZERAR || 'suasenha123';
+// Senha para a rota de administração
+const SENHA_ADMIN_ZERAR = 'adm@123'; // *** Mude esta senha para algo seguro ***
 
 // ----------------------------------------------------
-// Lógica de Leitura de Matrículas e Nomes
+// Conexão com o MongoDB
 // ----------------------------------------------------
-function lerDadosDoCSV(nomeDoArquivo) {
-    const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
-    try {
+const dbURI = process.env.MONGODB_URI;
+
+mongoose.connect(dbURI)
+  .then(() => {
+    console.log('Conexão com o MongoDB estabelecida!');
+    
+    // ----------------------------------------------------
+    // Lógica de Leitura de Matrículas e Nomes
+    // ----------------------------------------------------
+    // Movemos a lógica de leitura do CSV para dentro da conexão do MongoDB
+    // para garantir que o servidor só inicie após a conexão ser bem-sucedida.
+    let listaDeFuncionarios = [];
+    
+    function lerDadosDoCSV(nomeDoArquivo) {
+      const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
+      try {
         const conteudo = fs.readFileSync(caminhoDoArquivo, 'utf8');
         const linhas = conteudo.trim().split('\n');
         linhas.shift(); // Remove o cabeçalho
         return linhas.map(linha => {
-            const [matricula, nome] = linha.split(';');
-            return { matricula: matricula.trim(), nome: nome.trim() };
+          const [matricula, nome] = linha.split(';');
+          return { matricula: matricula.trim(), nome: nome.trim() };
         });
-    } catch (erro) {
+      } catch (erro) {
         console.error(`Erro ao ler o arquivo CSV: ${erro.message}`);
         return [];
+      }
     }
-}
+    
+    // Carrega as matrículas do arquivo CSV
+    listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
+    console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
 
-const listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
-console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
+    // ----------------------------------------------------
+    // Inicia o Servidor (apenas se a conexão com o MongoDB for bem-sucedida)
+    // ----------------------------------------------------
+    app.listen(PORT, () => {
+      console.log(`Servidor rodando em http://localhost:${PORT}`);
+    });
+
+  })
+  .catch((err) => {
+    console.error('Erro de conexão com o MongoDB:', err);
+    // Adicione a lógica para sair da aplicação caso a conexão falhe
+    process.exit(1);
+  });
+
 
 // ----------------------------------------------------
-// Lógica de Log e Relatório (Agora usando o MongoDB)
+// Rotas da API
 // ----------------------------------------------------
 
-async function registrarAcesso(matricula, nome, status) {
-    try {
-        const novoAcesso = new Acesso({ matricula, nome, status });
-        await novoAcesso.save();
-    } catch (err) {
-        console.error('Erro ao registrar acesso no banco de dados:', err);
-    }
-}
+// Serve arquivos estáticos da pasta 'public'
+app.use(express.static('public'));
 
-async function jaAcessouHoje(matricula) {
-    try {
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const count = await Acesso.countDocuments({
-            matricula: matricula,
-            status: 'concedido',
-            dataHora: { $gte: hoje }
-        });
-        return count > 0;
-    } catch (err) {
-        console.error('Erro ao verificar acesso no banco de dados:', err);
-        return false;
-    }
-}
-
-// Rotas (com alterações para usar as funções do MongoDB)
+// Rota para a página do funcionário (página inicial)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Rota para a página de administração
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-app.post('/verificar-acesso', async (req, res) => {
-    const { matricula } = req.body;
-    const funcionario = listaDeFuncionarios.find(f => f.matricula === matricula);
+// Permite que o servidor processe dados JSON no corpo da requisição
+app.use(express.json());
 
-    if (!funcionario) {
-        await registrarAcesso(matricula, 'Desconhecido', 'negado');
-        return res.status(401).json({ mensagem: 'Acesso negado. Matrícula não encontrada.' });
-    }
+// ----------------------------------------------------
+// Lógica de Log e Relatório (Usando arquivos, que não é o ideal para o Render)
+// ----------------------------------------------------
+// NOTA: Esta lógica funciona, mas para um projeto robusto, o ideal é
+// substituir o uso de arquivos (.log, .csv) por coleções no MongoDB.
+// Manter esta lógica para o momento, já que o foco é a conexão.
+// ----------------------------------------------------
+const arquivoDeLog = 'acessos.log';
+const pastaRelatorios = 'relatorios';
 
-    if (await jaAcessouHoje(matricula)) {
-        await registrarAcesso(matricula, funcionario.nome, 'negado (acesso duplicado)');
-        return res.status(403).json({ mensagem: `${funcionario.nome}, você já verificou seu acesso hoje.` });
-    }
+function registrarAcesso(matricula, nome, status) {
+    const dataHora = new Date().toISOString();
+    const registro = `${dataHora} - Matrícula: ${matricula} - Nome: ${nome} - Status: ${status}\n`;
+    fs.appendFileSync(arquivoDeLog, registro, 'utf8');
+}
 
-    await registrarAcesso(matricula, funcionario.nome, 'concedido');
-    res.status(200).json({ mensagem: 'Acesso concedido. Bem-vindo, ', nome: funcionario.nome, status: 'aprovado' });
-});
-
-app.get('/relatorio-diario', async (req, res) => {
+// Função para verificar se a matrícula já foi usada hoje
+function jaAcessouHoje(matricula) {
     try {
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-
-        const registrosDeHoje = await Acesso.find({
-            dataHora: { $gte: hoje }
-        });
-
-        let acessosConcedidos = 0;
-        let matriculasNegadas = new Set();
-        
-        registrosDeHoje.forEach(registro => {
-            if (registro.status === 'concedido') {
-                acessosConcedidos++;
-            } else if (registro.status.includes('negado')) {
-                matriculasNegadas.add(registro.matricula);
-            }
-        });
-
-        const relatorio = `
-Relatório Diário - ${hoje.toISOString().split('T')[0]}
-----------------------------------
-Total de Solicitações: ${registrosDeHoje.length}
-Acessos Concedidos: ${acessosConcedidos}
-Matrículas Negadas: ${[...matriculasNegadas].join(', ')}
-----------------------------------
-`;
-        res.status(200).send(relatorio);
-    } catch (erro) {
-        res.status(500).send(`Erro ao gerar o relatório: ${erro.message}`);
-    }
-});
-
-app.get('/api/zerar-relatorio', async (req, res) => {
-    const { senha } = req.query;
-    if (senha !== SENHA_ADMIN_ZERAR) {
-        return res.status(401).send("Acesso negado. Senha incorreta.");
-    }
-    try {
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        await Acesso.deleteMany({ dataHora: { $lt: hoje } });
-        res.status(200).send('Registros antigos zerados com sucesso!');
-    } catch (erro) {
-        res.status(500).send(`Erro ao zerar o relatório: ${erro.message}`);
-    }
-});
-
-// Tarefa agendada para limpar o banco de dados à meia-noite
-cron.schedule('0 0 * * *', async () => {
-    try {
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        await Acesso.deleteMany({ dataHora: { $lt: hoje } });
-        console.log('Registros antigos do banco de dados limpos com sucesso!');
-    } catch (erro) {
-        console.error(`Erro ao limpar o banco de dados: ${erro.message}`);
-    }
-});
-
-app.listen(PORT, () => {
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
+        if (!fs.existsSync(arquivoDeLog)) {
+            return false;
