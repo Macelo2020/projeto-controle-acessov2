@@ -4,13 +4,39 @@ const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Adicionado o módulo CORS
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Senha para a rota de administração
 const SENHA_ADMIN_ZERAR = 'adm@123';
+
+// ----------------------------------------------------
+// Lógica de Leitura de Matrículas e Nomes
+// ----------------------------------------------------
+let listaDeFuncionarios = [];
+
+function lerDadosDoCSV(nomeDoArquivo) {
+    const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
+    try {
+        const conteudo = fs.readFileSync(caminhoDoArquivo, 'utf8');
+        const linhas = conteudo.trim().split('\n');
+        linhas.shift(); // Remove o cabeçalho
+        return linhas.map(linha => {
+            const [matricula, nome] = linha.split(';');
+            return { matricula: matricula.trim(), nome: nome.trim() };
+        });
+    } catch (erro) {
+        console.error(`Erro ao ler o arquivo CSV: ${erro.message}`);
+        return [];
+    }
+}
+
+// Carrega as matrículas do arquivo CSV
+listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
+console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
+
 
 // ----------------------------------------------------
 // Conexão com o MongoDB
@@ -20,39 +46,6 @@ const dbURI = process.env.MONGODB_URI;
 mongoose.connect(dbURI)
   .then(() => {
     console.log('Conexão com o MongoDB estabelecida!');
-    
-    // ----------------------------------------------------
-    // Lógica de Leitura de Matrículas e Nomes
-    // ----------------------------------------------------
-    let listaDeFuncionarios = [];
-    
-    function lerDadosDoCSV(nomeDoArquivo) {
-      const caminhoDoArquivo = path.join(__dirname, nomeDoArquivo);
-      try {
-        const conteudo = fs.readFileSync(caminhoDoArquivo, 'utf8');
-        const linhas = conteudo.trim().split('\n');
-        linhas.shift(); // Remove o cabeçalho
-        return linhas.map(linha => {
-          const [matricula, nome] = linha.split(';');
-          return { matricula: matricula.trim(), nome: nome.trim() };
-        });
-      } catch (erro) {
-        console.error(`Erro ao ler o arquivo CSV: ${erro.message}`);
-        return [];
-      }
-    }
-    
-    // Carrega as matrículas do arquivo CSV
-    listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
-    console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
-
-    // ----------------------------------------------------
-    // Inicia o Servidor (apenas se a conexão com o MongoDB for bem-sucedida)
-    // ----------------------------------------------------
-    app.listen(PORT, () => {
-      console.log(`Servidor rodando em http://localhost:${PORT}`);
-    });
-
   })
   .catch((err) => {
     console.error('Erro de conexão com o MongoDB:', err);
@@ -64,7 +57,7 @@ mongoose.connect(dbURI)
 // ----------------------------------------------------
 app.use(express.static('public'));
 app.use(express.json());
-app.use(cors()); // Habilita o CORS para todas as rotas
+app.use(cors());
 
 
 // ----------------------------------------------------
@@ -242,4 +235,11 @@ app.get('/admin2/zerar', (req, res) => {
         res.status(500).send(`Erro ao zerar o relatório: ${erro.message}`);
         console.error(`Erro ao zerar o relatório: ${erro.message}`);
     }
+});
+
+// ----------------------------------------------------
+// Inicia o Servidor (apenas se a conexão com o MongoDB for bem-sucedida)
+// ----------------------------------------------------
+app.listen(PORT, () => {
+    console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
