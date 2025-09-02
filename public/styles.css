@@ -22,7 +22,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 500px;
+    min-height: 500px; /* Garante um tamanho mínimo para visualização */
 }
 
 /* Fundo com imagem e sobreposição */
@@ -37,7 +37,7 @@ body {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: 0.1;
+    opacity: 0.1; /* Opacidade da imagem (0 a 1) */
     z-index: 0;
 }
 
@@ -49,14 +49,14 @@ body {
 
 /* Estilos para as logos */
 .hospital-logo {
-    max-width: 180px;
-    margin-bottom: 15px;
+    max-width: 180px; /* Tamanho da logo do hospital */
+    margin-bottom: 15px; /* Espaço abaixo da logo */
 }
 
 .developer-logo {
-    max-width: 150px;
-    opacity: 0.6;
-    margin-top: 20px;
+    max-width: 150px; /* Tamanho da logo do desenvolvedor */
+    opacity: 0.6; /* Deixa a logo do desenvolvedor um pouco mais suave */
+    margin-top: 20px; /* Espaço acima da logo */
 }
 
 /* Estilo para o texto do rodapé */
@@ -69,8 +69,9 @@ body {
 }
 
 .developer-logo-area {
-    margin-top: 15px;
+    margin-top: 15px; /* Adiciona espaçamento entre a mensagem e o rodapé */
 }
+
 
 /* Estilos de cabeçalho */
 .logo-area h1 {
@@ -91,7 +92,7 @@ p {
     font-size: 1em;
 }
 
-/* Estilo do formulário */
+/* Estilo do formulário (usado também em admin para consistência) */
 input[type="text"] {
     width: calc(100% - 20px);
     padding: 15px 10px;
@@ -116,6 +117,19 @@ button {
 
 button:hover {
     background-color: #00332c;
+}
+
+/* Estilos específicos para a área de botões do admin */
+.admin-actions {
+    display: flex;
+    flex-direction: column; /* Botões um abaixo do outro */
+    gap: 15px; /* Espaçamento entre os botões */
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.admin-actions button {
+    width: 100%; /* Botões ocupam a largura total */
 }
 
 /* Área de mensagem com destaque visual */

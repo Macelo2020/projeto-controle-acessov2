@@ -1,26 +1,66 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Administração</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>Painel de Administração</h1>
-        <p>Apenas usuários autorizados podem acessar esta página.</p>
+        <header class="logo-area">
+            <img src="images/hospital-sao-vicente-logo.png" alt="Logo Hospital São Vicente de Paulo" class="hospital-logo">
+            <h1>Painel de Administração</h1>
+            <h2>Refeitório - Hospital São Vicente de Paulo</h2>
+        </header>
 
-        <div class="section">
-            <h2>Relatório Diário</h2>
-            <button id="btnGerarRelatorio">Gerar Relatório</button>
-            <button id="btnBaixarRelatorio">Baixar Relatório</button>
-        </div>
+        <main class="admin-main">
+            <p>Gerenciamento de Acessos ao Refeitório.</p>
+            
+            <div class="admin-actions">
+                <button onclick="window.location.href='/relatorio-diario'">Ver Relatório Diário</button>
+                <button onclick="window.location.href='/baixar-relatorio'">Baixar Relatório Diário</button>
+                <button onclick="confirmZerarRelatorio()">Zerar Relatório Diário</button>
+            </div>
+            <div id="adminMessage" class="message-area"></div>
+        </main>
 
-        <pre id="relatorioTexto"></pre>
-        <div id="mensagemRelatorio"></div>
+        <footer class="developer-logo-area">
+            <img src="images/blue-frog-logo.png" alt="Logo Blue Frog Creative Solutions" class="developer-logo">
+            <p class="copyright-text">© 2025 - Hospital São Vicente de Paulo - Todos os direitos reservados.</p>
+            <p class="developer-text">Criação e desenvolvimento: Blue Frog Creative Solutions</p>
+        </footer>
     </div>
-    <script src="admin.js"></script>
+
+    <script>
+        // Função para confirmar o zeramento do relatório
+        async function confirmZerarRelatorio() {
+            const senha = prompt("Digite a senha de administrador para zerar o relatório:");
+            if (senha === null || senha === "") {
+                return; // Usuário cancelou ou não digitou nada
+            }
+
+            try {
+                const response = await fetch(`/admin2/zerar?senha=${senha}`);
+                const messageDiv = document.getElementById('adminMessage');
+                messageDiv.className = 'message-area'; // Resetar classes
+
+                if (response.ok) {
+                    messageDiv.innerHTML = `<span class="icon material-icons">check_circle</span> <div class="text-content"><p class="title">Relatório Zerado!</p><p class="details">O relatório diário foi zerado com sucesso.</p></div>`;
+                    messageDiv.classList.add('success');
+                } else {
+                    const errorText = await response.text(); // Pega o texto da resposta
+                    messageDiv.innerHTML = `<span class="icon material-icons">cancel</span> <div class="text-content"><p class="title">Erro ao Zerar!</p><p class="details">${errorText}</p></div>`;
+                    messageDiv.classList.add('error');
+                }
+            } catch (error) {
+                console.error('Erro ao comunicar com o servidor:', error);
+                const messageDiv = document.getElementById('adminMessage');
+                messageDiv.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Conexão!</p><p class="details">Não foi possível se conectar ao servidor.</p></div>`;
+                messageDiv.classList.add('error');
+            }
+        }
+    </script>
 </body>
 </html>
