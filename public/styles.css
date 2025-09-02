@@ -1,93 +1,166 @@
+/* Estilos globais e de layout */
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
-    color: #333;
+    font-family: 'Arial', sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    flex-direction: column;
+    background-color: #f0f2f5;
 }
 
 .container {
-    background-color: #fff;
+    background: #fff;
     padding: 2em;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 90%;
-    max-width: 500px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     text-align: center;
+    width: 100%;
+    max-width: 450px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 500px;
+}
+
+/* Fundo com imagem e sobreposição */
+.container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('images/refeitorio-background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.1;
+    z-index: 0;
+}
+
+/* Garante que o conteúdo fique sobre a imagem de fundo */
+.container > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Estilos para as logos */
+.hospital-logo {
+    max-width: 180px;
+    margin-bottom: 15px;
+}
+
+.developer-logo {
+    max-width: 150px;
+    opacity: 0.6;
+    margin-top: 20px;
+}
+
+/* Estilo para o texto do rodapé */
+.copyright-text, .developer-text {
+    font-size: 0.8em;
+    color: #555;
+    opacity: 0.7;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.developer-logo-area {
+    margin-top: 15px;
+}
+
+/* Estilos de cabeçalho */
+.logo-area h1 {
+    font-size: 1.5em;
+    color: #004d40;
+    margin-bottom: 0.25em;
+}
+
+.logo-area h2 {
+    font-size: 1em;
+    color: #555;
+    margin-top: 0;
     margin-bottom: 2em;
 }
 
-h1, h2 {
-    color: #4CAF50;
+p {
+    color: #555;
+    font-size: 1em;
 }
 
+/* Estilo do formulário */
 input[type="text"] {
-    width: calc(100% - 22px);
-    padding: 10px;
-    margin: 10px 0;
+    width: calc(100% - 20px);
+    padding: 15px 10px;
+    margin-bottom: 20px;
     border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
+    border-radius: 8px;
+    font-size: 1.1em;
+    text-align: center;
 }
 
 button {
-    background-color: #4CAF50;
+    background-color: #004d40;
     color: white;
-    padding: 12px 20px;
+    padding: 15px 25px;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
-    margin-top: 10px;
+    font-size: 1.1em;
+    font-weight: bold;
     transition: background-color 0.3s ease;
 }
 
 button:hover {
-    background-color: #45a049;
+    background-color: #00332c;
 }
 
-#mensagemStatus {
-    margin-top: 1em;
+/* Área de mensagem com destaque visual */
+.message-area {
+    margin-top: 25px;
+    padding: 20px;
+    border-radius: 10px;
+    line-height: 1.5;
     font-weight: bold;
-}
-
-#mensagemStatus[style*="green"] {
-    color: #28a745;
-}
-
-#mensagemStatus[style*="red"] {
-    color: #dc3545;
-}
-
-#relatorio {
-    margin-top: 1.5em;
-    padding: 1em;
-    background-color: #e9ecef;
-    border-radius: 4px;
     text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
-#btnZerarRelatorio {
-    background-color: #dc3545;
+.message-area .icon {
+    font-size: 2.5em;
 }
 
-#btnZerarRelatorio:hover {
-    background-color: #c82333;
+.message-area .text-content {
+    flex-grow: 1;
 }
 
-#mensagemZerarRelatorio {
-    margin-top: 1em;
-    font-weight: bold;
+.message-area .title {
+    font-size: 1.2em;
+    margin: 0 0 5px 0;
+    font-weight: 900;
 }
 
-#mensagemZerarRelatorio[style*="green"] {
-    color: #28a745;
+.message-area .details {
+    font-size: 1em;
+    margin: 0;
+    font-weight: normal;
 }
 
-#mensagemZerarRelatorio[style*="red"] {
-    color: #dc3545;
+/* Estilo para mensagem de sucesso */
+.message-area.success {
+    background-color: #e6f7e6;
+    color: #004d40;
+    border: 2px solid #004d40;
+}
+
+/* Estilo para mensagem de erro */
+.message-area.error {
+    background-color: #fdeaea;
+    color: #d9534f;
+    border: 2px solid #d9534f;
 }

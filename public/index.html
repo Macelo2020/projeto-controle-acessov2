@@ -1,20 +1,36 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificação de Acesso</title>
+    <title>Verificação de Acesso - Refeitório</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>Verificação de Acesso</h1>
-        <p>Digite sua matrícula para verificar o acesso:</p>
-        
-        <input type="text" id="inputMatricula" placeholder="Digite a matrícula">
-        <button id="btnVerificar">Verificar Acesso</button>
-        
-        <p id="mensagemStatus"></p>
+        <header class="logo-area">
+            <img src="images/hospital-sao-vicente-logo.png" alt="Logo Hospital São Vicente de Paulo" class="hospital-logo">
+            <h1>Bem-vindo(a) ao Refeitório</h1>
+            <h2>Controle de Acesso ao Refeitório</h2>
+        </header>
+
+        <main>
+            <p>Digite sua matrícula para verificar o acesso:</p>
+            
+            <form id="acessoForm">
+                <input type="text" id="matricula" placeholder="Digite sua matrícula" required>
+                <button type="submit">Verificar Acesso</button>
+            </form>
+            
+            <div id="mensagem" class="message-area"></div>
+        </main>
+
+        <footer class="developer-logo-area">
+            <img src="images/blue-frog-logo.png" alt="Logo Blue Frog Creative Solutions" class="developer-logo">
+            <p class="copyright-text">© 2025 - Hospital São Vicente de Paulo - Todos os direitos reservados.</p>
+            <p class="developer-text">Criação e desenvolvimento: Blue Frog Creative Solutions</p>
+        </footer>
     </div>
 
     <script src="script.js"></script>

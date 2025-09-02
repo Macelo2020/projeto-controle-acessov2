@@ -1,51 +1,54 @@
-document.getElementById('btnVerificar').addEventListener('click', async () => {
-    const matricula = document.getElementById('inputMatricula').value;
-    const mensagemElement = document.getElementById('mensagemStatus');
-    
-    // Limpa a mensagem anterior
-    mensagemElement.innerHTML = '';
-    
-    if (!matricula) {
-        mensagemElement.textContent = 'Por favor, digite uma matrícula.';
-        return;
-    }
+document.getElementById('acessoForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+
+    const matricula = document.getElementById('matricula').value;
+    const mensagemDiv = document.getElementById('mensagem');
+
+    // Limpa mensagens anteriores e reseta as classes
+    mensagemDiv.innerHTML = '';
+    mensagemDiv.className = 'message-area';
 
     try {
-        const resposta = await fetch('/verificar-acesso', {
+        const response = await fetch('/verificar-acesso', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ matricula })
+            body: JSON.stringify({ matricula: matricula })
         });
 
-        const dados = await resposta.json();
-        
-        // Função para formatar a data e a hora
-        const formatarDataHora = () => {
-            const agora = new Date();
-            const data = agora.toLocaleDateString('pt-BR');
-            const hora = agora.toLocaleTimeString('pt-BR');
-            return `<p>Acesso realizado em: ${data} às ${hora}</p>`;
-        };
+        const data = await response.json();
 
-        if (dados.status === 'aprovado') {
-            // Se o status for aprovado, exibe o nome do funcionário
-            mensagemElement.innerHTML = `
-                <p>${dados.mensagem} ${dados.nome}</p>
-                ${formatarDataHora()}
+        if (response.ok) {
+            const dataHoraAcesso = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' });
+            mensagemDiv.innerHTML = `
+                <span class="icon material-icons">check_circle</span>
+                <div class="text-content">
+                    <p class="title">Acesso Concedido.</p>
+                    <p class="details">Bem-vindo, ${data.nome}</p>
+                    <p class="details">Acesso realizado em: ${dataHoraAcesso}</p>
+                </div>
             `;
-            mensagemElement.style.color = 'green';
+            mensagemDiv.classList.add('success');
         } else {
-            // Se o status for negado, apenas a mensagem é exibida
-            mensagemElement.innerHTML = `
-                <p>${dados.mensagem}</p>
-                ${formatarDataHora()}
+            mensagemDiv.innerHTML = `
+                <span class="icon material-icons">cancel</span>
+                <div class="text-content">
+                    <p class="title">Acesso Negado.</p>
+                    <p class="details">Motivo: ${data.mensagem}</p>
+                </div>
             `;
-            mensagemElement.style.color = 'red';
+            mensagemDiv.classList.add('error');
         }
-    } catch (erro) {
-        mensagemElement.innerHTML = `<p>Erro ao se comunicar com o servidor.</p>`;
-        console.error('Erro:', erro);
+    } catch (error) {
+        console.error('Erro ao se comunicar com o servidor:', error);
+        mensagemDiv.innerHTML = `
+            <span class="icon material-icons">warning</span>
+            <div class="text-content">
+                <p class="title">Erro de Conexão.</p>
+                <p class="details">Não foi possível se conectar ao servidor.</p>
+            </div>
+        `;
+        mensagemDiv.classList.add('error');
     }
 });
