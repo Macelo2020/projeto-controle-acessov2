@@ -20,10 +20,15 @@
             
             <form id="acessoForm">
                 <input type="text" id="matricula" placeholder="Digite sua matrícula" required>
-                <button type="submit">Verificar Acesso</button>
+                <div class="button-container">
+                    <button type="submit" id="btnVerificar">
+                        <span class="btn-text">Verificar Acesso</span>
+                        <span class="loading-text" style="display: none;">Acessando...</span>
+                    </button>
+                </div>
             </form>
             
-            <div id="mensagem" class="message-area"></div>
+            <div id="mensagem" class="message-area" aria-live="polite"></div>
         </main>
 
         <footer class="developer-logo-area">

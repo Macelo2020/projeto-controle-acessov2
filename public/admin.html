@@ -19,11 +19,34 @@
             <p>Gerenciamento de Acessos ao Refeitório.</p>
             
             <div class="admin-actions">
-                <button onclick="window.location.href='/relatorio-diario'">Ver Relatório Diário</button>
-                <button onclick="window.location.href='/baixar-relatorio'">Baixar Relatório Diário</button>
-                <button onclick="confirmZerarRelatorio()">Zerar Relatório Diário</button>
+                <button id="btnGerarRelatorio">
+                    <span class="material-icons">visibility</span> Ver Relatório Diário
+                </button>
+                <button id="btnBaixarRelatorio">
+                    <span class="material-icons">download</span> Baixar Relatório Diário
+                </button>
+                <button id="btnZerarRelatorio">
+                    <span class="material-icons">delete_forever</span> Zerar Relatório Diário
+                </button>
             </div>
-            <div id="adminMessage" class="message-area"></div>
+
+            <div id="relatorioTexto">
+                <div id="adminMessage" class="message-area" aria-live="polite"></div>
+                <div class="table-container">
+                    <table id="relatorioTable">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Matrícula</th>
+                                <th>Nome</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
         </main>
 
         <footer class="developer-logo-area">
@@ -33,34 +56,6 @@
         </footer>
     </div>
 
-    <script>
-        // Função para confirmar o zeramento do relatório
-        async function confirmZerarRelatorio() {
-            const senha = prompt("Digite a senha de administrador para zerar o relatório:");
-            if (senha === null || senha === "") {
-                return; // Usuário cancelou ou não digitou nada
-            }
-
-            try {
-                const response = await fetch(`/admin2/zerar?senha=${senha}`);
-                const messageDiv = document.getElementById('adminMessage');
-                messageDiv.className = 'message-area'; // Resetar classes
-
-                if (response.ok) {
-                    messageDiv.innerHTML = `<span class="icon material-icons">check_circle</span> <div class="text-content"><p class="title">Relatório Zerado!</p><p class="details">O relatório diário foi zerado com sucesso.</p></div>`;
-                    messageDiv.classList.add('success');
-                } else {
-                    const errorText = await response.text(); // Pega o texto da resposta
-                    messageDiv.innerHTML = `<span class="icon material-icons">cancel</span> <div class="text-content"><p class="title">Erro ao Zerar!</p><p class="details">${errorText}</p></div>`;
-                    messageDiv.classList.add('error');
-                }
-            } catch (error) {
-                console.error('Erro ao comunicar com o servidor:', error);
-                const messageDiv = document.getElementById('adminMessage');
-                messageDiv.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Conexão!</p><p class="details">Não foi possível se conectar ao servidor.</p></div>`;
-                messageDiv.classList.add('error');
-            }
-        }
-    </script>
+    <script src="admin.js"></script>
 </body>
 </html>
