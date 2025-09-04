@@ -1,7 +1,7 @@
 document.getElementById('btnGerarRelatorio').addEventListener('click', async () => {
     const mensagemElement = document.getElementById('adminMessage');
     const tableBody = document.querySelector('#relatorioTable tbody');
-    
+
     // Limpa mensagens e tabela anteriores
     mensagemElement.innerHTML = '';
     mensagemElement.className = 'message-area';
@@ -11,6 +11,7 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
         const resposta = await fetch('/relatorio-diario');
         const relatorio = await resposta.text();
         
+        // Verifica se o relatório está vazio
         if (relatorio.trim() === '') {
             mensagemElement.innerHTML = `<span class="icon material-icons">info</span> <div class="text-content"><p class="title">Relatório Vazio</p><p class="details">Não há acessos registrados para hoje.</p></div>`;
             mensagemElement.classList.add('error');
@@ -19,7 +20,10 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
 
         // Divide o relatório em linhas e processa cada uma
         const linhas = relatorio.trim().split('\n');
+        let parsedCount = 0;
+
         linhas.forEach(linha => {
+            // Regex para capturar os dados da linha
             const regex = /(.+) - Matrícula: (\d+) - Nome: (.+) - Status: (.+)/;
             const match = linha.match(regex);
             
@@ -33,11 +37,21 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
                     <td><span class="status ${status.toLowerCase()}">${status}</span></td>
                 `;
                 tableBody.appendChild(newRow);
+                parsedCount++;
             }
         });
 
+        if (parsedCount > 0) {
+            mensagemElement.innerHTML = `<span class="icon material-icons">check_circle</span> <div class="text-content"><p class="title">Relatório Gerado!</p><p class="details">Foram encontrados ${parsedCount} acessos.</p></div>`;
+            mensagemElement.classList.add('success');
+        } else {
+            // Se nenhuma linha correspondeu, o formato do arquivo está incorreto
+            mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Formato</p><p class="details">O conteúdo do arquivo de relatório não pôde ser lido corretamente.</p></div>`;
+            mensagemElement.classList.add('error');
+        }
+
     } catch (erro) {
-        mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro!</p><p class="details">Erro ao se comunicar com o servidor ou gerar o relatório.</p></div>`;
+        mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Conexão!</p><p class="details">Não foi possível se conectar ao servidor.</p></div>`;
         mensagemElement.classList.add('error');
     }
 });
