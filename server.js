@@ -10,27 +10,6 @@ const PORT = process.env.PORT || 3000;
 // Senha para a rota de administração
 const SENHA_ADMIN_ZERAR = 'adm@123';
 
-// Middleware para processar JSON e dados de formulário
-app.use(express.static('public'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Conexão com o MongoDB
-const uri = process.env.MONGODB_URI;
-mongoose.connect(uri)
-    .then(() => console.log('Conectado ao MongoDB!'))
-    .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
-
-// Definição do Schema e Modelo do Mongoose
-const acessoSchema = new mongoose.Schema({
-    matricula: String,
-    nome: String,
-    status: String,
-    data_acesso: { type: Date, default: Date.now }
-}, { collection: 'acessos' });
-
-const Acesso = mongoose.model('Acesso', acessoSchema);
-
 // ----------------------------------------------------
 // Lógica de Leitura de Matrículas e Nomes
 // ----------------------------------------------------
@@ -57,125 +36,189 @@ listaDeFuncionarios = lerDadosDoCSV('matriculas.csv');
 console.log(`Carregadas ${listaDeFuncionarios.length} matrículas para a memória.`);
 
 // ----------------------------------------------------
-// Rotas da Aplicação
+// Conexão com o MongoDB
+// ----------------------------------------------------
+const dbURI = process.env.MONGODB_URI;
+
+mongoose.connect(dbURI)
+    .then(() => {
+        console.log('Conexão com o MongoDB estabelecida!');
+        app.listen(PORT, () => {
+            console.log(`Servidor rodando em http://localhost:${PORT}`);
+        });
+
+    })
+    .catch((err) => {
+        console.error('Erro de conexão com o MongoDB:', err);
+        process.exit(1);
+    });
+
+// ----------------------------------------------------
+// Schema e Modelo do MongoDB para Acessos
+// ----------------------------------------------------
+const acessoSchema = new mongoose.Schema({
+    matricula: String,
+    nome: String,
+    status: String,
+    dataHora: { type: Date, default: Date.now }
+});
+
+const Acesso = mongoose.model('Acesso', acessoSchema);
+
+// ----------------------------------------------------
+// Funções de Lógica
 // ----------------------------------------------------
 
-// Rota para a página principal
+// Função para registrar acesso no MongoDB
+async function registrarAcesso(matricula, nome, status) {
+    const novoAcesso = new Acesso({
+        matricula,
+        nome,
+        status,
+        dataHora: new Date()
+    });
+    try {
+        await novoAcesso.save();
+        console.log('Acesso registrado no MongoDB com sucesso!');
+    } catch (erro) {
+        console.error('Erro ao registrar acesso no MongoDB:', erro);
+    }
+}
+
+// Função para verificar se a matrícula já foi usada hoje (no MongoDB)
+async function jaAcessouHoje(matricula) {
+    const dataDeHoje = new Date().toISOString().split('T')[0];
+    const inicioDoDia = new Date(`${dataDeHoje}T00:00:00Z`);
+    const fimDoDia = new Date(`${dataDeHoje}T23:59:59Z`);
+
+    try {
+        const acessoExistente = await Acesso.findOne({
+            matricula: matricula,
+            status: 'concedido',
+            dataHora: { $gte: inicioDoDia, $lte: fimDoDia }
+        });
+        return !!acessoExistente;
+    } catch (erro) {
+        console.error('Erro ao verificar acesso no MongoDB:', erro);
+        return false;
+    }
+}
+
+// Função para gerar o relatório em formato de string (do MongoDB), agora com um parâmetro de data
+async function gerarRelatorio(dataParaRelatorio) {
+    try {
+        const data = dataParaRelatorio ? new Date(dataParaRelatorio) : new Date();
+        const dataString = data.toISOString().split('T')[0];
+        const inicioDoDia = new Date(`${dataString}T00:00:00Z`);
+        const fimDoDia = new Date(`${dataString}T23:59:59Z`);
+
+        const registrosDoDia = await Acesso.find({
+            dataHora: { $gte: inicioDoDia, $lte: fimDoDia }
+        });
+
+        let acessosConcedidos = 0;
+        let matriculasNegadas = [];
+
+        registrosDoDia.forEach(registro => {
+            if (registro.status === 'concedido') {
+                acessosConcedidos++;
+            } else if (registro.status === 'negado' || registro.status.includes('duplicado')) {
+                matriculasNegadas.push(registro.matricula);
+            }
+        });
+
+        const relatorio = `
+Relatório Diário - ${dataString}
+----------------------------------
+Total de Solicitações: ${registrosDoDia.length}
+Acessos Concedidos: ${acessosConcedidos}
+Matrículas Negadas: ${matriculasNegadas.join(', ')}
+----------------------------------
+`;
+        return relatorio;
+    } catch (erro) {
+        console.error('Erro ao gerar o relatório do MongoDB:', erro);
+        return `Erro ao gerar o relatório: ${erro.message}`;
+    }
+}
+
+
+// ----------------------------------------------------
+// Rotas da API
+// ----------------------------------------------------
+
+// Serve arquivos estáticos da pasta 'public'
+app.use(express.static('public'));
+
+// Rota para a página do funcionário (página inicial)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Rota de login do painel de administração
+// Rota para a página de administração
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// Rota para autenticação
-app.post('/admin', (req, res) => {
-    const { usuario, senha } = req.body;
-    const usuarioCorreto = 'admin'; 
-    const senhaCorreta = '123456';
+// Permite que o servidor processe dados JSON no corpo da requisição
+app.use(express.json());
 
-    if (usuario === usuarioCorreto && senha === senhaCorreta) {
-        res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-    } else {
-        res.status(401).send('Credenciais inválidas');
-    }
-});
-
-// Rota para verificação de acesso (CORRIGIDA)
+// Rota POST para verificar a matrícula
 app.post('/verificar-acesso', async (req, res) => {
     const { matricula } = req.body;
-    let status = 'negado';
-    let mensagem = 'Matrícula não cadastrada.';
-    let nome = 'Não Encontrado';
-
     const funcionario = listaDeFuncionarios.find(f => f.matricula === matricula);
 
-    if (funcionario) {
-        status = 'aprovado';
-        mensagem = 'Acesso Aprovado!';
-        nome = funcionario.nome;
-    } else {
-        status = 'negado';
-        mensagem = 'Acesso Negado!';
-        nome = 'Não Encontrado';
+    if (!funcionario) {
+        await registrarAcesso(matricula, 'Desconhecido', 'negado');
+        res.status(401).json({ mensagem: 'Acesso negado. Matrícula não encontrada.' });
+        return;
     }
 
-    try {
-        // Cria uma nova instância do modelo Acesso
-        const novoAcesso = new Acesso({
-            matricula,
-            nome,
-            status,
-            data_acesso: new Date()
-        });
-        // Salva o novo registro no banco de dados
-        await novoAcesso.save();
-
-        res.json({ status, mensagem, nome });
-    } catch (erro) {
-        console.error('Erro ao registrar o acesso no banco de dados:', erro);
-        res.status(500).send('Erro interno do servidor ao registrar o acesso.');
+    if (await jaAcessouHoje(matricula)) {
+        await registrarAcesso(matricula, funcionario.nome, 'negado (acesso duplicado)');
+        res.status(403).json({ mensagem: `${funcionario.nome}, você já verificou seu acesso hoje.` });
+        return;
     }
+
+    await registrarAcesso(matricula, funcionario.nome, 'concedido');
+    res.status(200).json({ mensagem: 'Acesso concedido. Bem-vindo, ', nome: funcionario.nome, status: 'aprovado' });
 });
 
-// Rota para gerar o relatório diário (CORRIGIDA)
+// Rota GET para gerar o relatório diário
 app.get('/relatorio-diario', async (req, res) => {
-    try {
-        const inicioDoDia = new Date();
-        inicioDoDia.setHours(0, 0, 0, 0);
-        
-        const fimDoDia = new Date();
-        fimDoDia.setHours(23, 59, 59, 999);
-
-        const acessos = await Acesso.find({
-            data_acesso: {
-                $gte: inicioDoDia,
-                $lt: fimDoDia
-            }
-        }).sort({ data_acesso: 1 });
-
-        if (acessos.length === 0) {
-            return res.status(204).send();
-        }
-        res.json(acessos);
-    } catch (erro) {
-        console.error('Erro ao buscar o relatório do banco de dados:', erro);
-        res.status(500).send('Erro interno do servidor ao gerar o relatório.');
-    }
+    const dataParaRelatorio = req.query.data;
+    const relatorio = await gerarRelatorio(dataParaRelatorio);
+    res.status(200).send(relatorio);
 });
 
-// Rota para baixar o relatório completo (em CSV)
+// Rota GET para baixar o relatório diário
 app.get('/baixar-relatorio', async (req, res) => {
-    try {
-        const acessos = await Acesso.find({}).sort({ data_acesso: 1 });
+    const dataParaRelatorio = req.query.data;
+    const dataString = dataParaRelatorio || new Date().toISOString().split('T')[0];
+    const nomeDoArquivo = `relatorio-diario-${dataString}.txt`;
+    const caminhoDoArquivo = path.join(__dirname, 'relatorios', nomeDoArquivo);
 
-        if (acessos.length === 0) {
-            return res.status(404).send("Nenhum acesso registrado para baixar.");
-        }
+    const relatorio = await gerarRelatorio(dataParaRelatorio);
+    const pastaRelatorios = path.join(__dirname, 'relatorios');
 
-        const header = "Data/Hora;Matrícula;Nome;Status\n";
-        const csvContent = acessos.map(acesso => {
-            const dataHora = acesso.data_acesso.toLocaleString('pt-BR');
-            return `${dataHora};${acesso.matricula};${acesso.nome};${acesso.status}`;
-        }).join('\n');
+    if (!fs.existsSync(pastaRelatorios)) {
+        fs.mkdirSync(pastaRelatorios);
+    }
+    fs.writeFileSync(caminhoDoArquivo, relatorio, 'utf8');
 
-        const fullCsv = header + csvContent;
-        const nomeArquivo = 'relatorio_completo.csv';
-
-        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-        res.setHeader('Content-Disposition', `attachment; filename=\"${nomeArquivo}\"`);
-        res.send(fullCsv);
-
-    } catch (erro) {
-        console.error('Erro ao gerar o CSV para download:', erro);
-        res.status(500).send('Erro interno do servidor ao baixar o relatório.');
+    if (fs.existsSync(caminhoDoArquivo)) {
+        res.download(caminhoDoArquivo, nomeDoArquivo, (erro) => {
+            if (erro) {
+                console.error("Erro ao baixar o arquivo:", erro);
+                res.status(500).send("Erro ao tentar baixar o relatório.");
+            }
+        });
+    } else {
+        res.status(404).send("Relatório não encontrado. Verifique os logs do servidor.");
     }
 });
 
-
-// Rota para zerar o relatório (limpa a coleção no MongoDB)
+// Rota de acesso exclusivo para zerar o relatório (limpa a coleção no MongoDB)
 app.get('/admin2/zerar', async (req, res) => {
     const { senha } = req.query;
 
@@ -185,13 +228,10 @@ app.get('/admin2/zerar', async (req, res) => {
 
     try {
         await Acesso.deleteMany({});
-        res.status(200).send("Relatório zerado com sucesso.");
+        res.status(200).send('Relatório diário zerado com sucesso!');
+        console.log('Relatório diário zerado por acesso manual.');
     } catch (erro) {
-        console.error('Erro ao zerar o relatório:', erro);
-        res.status(500).send('Erro interno do servidor ao zerar o relatório.');
+        res.status(500).send(`Erro ao zerar o relatório: ${erro.message}`);
+        console.error(`Erro ao zerar o relatório: ${erro.message}`);
     }
-});
-
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
 });
