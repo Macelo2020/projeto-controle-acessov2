@@ -186,9 +186,16 @@ app.post('/verificar-acesso', async (req, res) => {
 
 // Rota GET para gerar o relatório diário
 app.get('/relatorio-diario', async (req, res) => {
-    const dataParaRelatorio = req.query.data;
-    const relatorio = await gerarRelatorio(dataParaRelatorio);
-    res.status(200).send(relatorio);
+    try {
+        const acessos = await Acesso.find({}).sort({ data_acesso: 1 });
+        if (acessos.length === 0) {
+            return res.status(204).send(); // 204 No Content para indicar que não há dados
+        }
+        res.json(acessos);
+    } catch (erro) {
+        console.error('Erro ao buscar o relatório do banco de dados:', erro);
+        res.status(500).send('Erro interno do servidor ao gerar o relatório.');
+    }
 });
 
 // Rota GET para baixar o relatório diário

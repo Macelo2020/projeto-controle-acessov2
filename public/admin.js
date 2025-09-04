@@ -13,33 +13,33 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
 
     try {
         const resposta = await fetch('/relatorio-diario');
-        const relatorio = await resposta.text();
         
-        if (relatorio.trim() === '') {
+        if (resposta.status === 204) {
             mensagemElement.innerHTML = `<span class="icon material-icons">info</span> <div class="text-content"><p class="title">Relatório Vazio</p><p class="details">Não há acessos registrados para hoje.</p></div>`;
             mensagemElement.classList.add('error');
             return;
         }
 
-        const linhas = relatorio.trim().split('\n');
+        if (!resposta.ok) {
+            const erroMensagem = await resposta.text();
+            throw new Error(erroMensagem);
+        }
+
+        const acessos = await resposta.json(); // <-- AQUI! Agora recebemos um JSON
         let parsedCount = 0;
 
-        linhas.forEach(linha => {
-            const regex = /\[(.+?)\]\s*-\s*Matrícula: (\d+)\s*-\s*Nome: (.+?)\s*-\s*Status: (.+)/;
-            const match = linha.match(regex);
-            
-            if (match) {
-                const [_, dataHora, matricula, nome, status] = match;
-                const newRow = document.createElement('tr');
-                newRow.innerHTML = `
-                    <td>${dataHora}</td>
-                    <td>${matricula}</td>
-                    <td>${nome}</td>
-                    <td><span class="status ${status.toLowerCase()}">${status}</span></td>
-                `;
-                tableBody.appendChild(newRow);
-                parsedCount++;
-            }
+        acessos.forEach(acesso => {
+            const dataHora = new Date(acesso.data_acesso).toLocaleString('pt-BR');
+            const status = acesso.status;
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${dataHora}</td>
+                <td>${acesso.matricula}</td>
+                <td>${acesso.nome}</td>
+                <td><span class="status ${status.toLowerCase()}">${status}</span></td>
+            `;
+            tableBody.appendChild(newRow);
+            parsedCount++;
         });
 
         if (parsedCount > 0) {
@@ -48,17 +48,10 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
         } else {
             mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Formato</p><p class="details">O conteúdo do arquivo de relatório não pôde ser lido corretamente.</p></div>`;
             mensagemElement.classList.add('error');
-            btnVerBruto.style.display = 'block';
-            
-            btnVerBruto.onclick = () => {
-                rawContentElement.textContent = relatorio;
-                rawContentElement.style.display = 'block';
-                btnVerBruto.style.display = 'none';
-            };
         }
 
     } catch (erro) {
-        mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Conexão!</p><p class="details">Não foi possível se conectar ao servidor.</p></div>`;
+        mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Conexão!</p><p class="details">Não foi possível se conectar ao servidor. ${erro.message}</p></div>`;
         mensagemElement.classList.add('error');
     }
 });
