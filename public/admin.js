@@ -4,7 +4,6 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
     const btnVerBruto = document.getElementById('btnVerBruto');
     const rawContentElement = document.getElementById('rawContent');
 
-    // Limpa mensagens, tabela e botão de depuração anteriores
     mensagemElement.innerHTML = '';
     mensagemElement.className = 'message-area';
     tableBody.innerHTML = '';
@@ -16,19 +15,16 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
         const resposta = await fetch('/relatorio-diario');
         const relatorio = await resposta.text();
         
-        // Verifica se o relatório está vazio
         if (relatorio.trim() === '') {
             mensagemElement.innerHTML = `<span class="icon material-icons">info</span> <div class="text-content"><p class="title">Relatório Vazio</p><p class="details">Não há acessos registrados para hoje.</p></div>`;
             mensagemElement.classList.add('error');
             return;
         }
 
-        // Divide o relatório em linhas e processa cada uma
         const linhas = relatorio.trim().split('\n');
         let parsedCount = 0;
 
         linhas.forEach(linha => {
-            // Nova regex para capturar a data com os colchetes
             const regex = /\[(.+?)\]\s*-\s*Matrícula: (\d+)\s*-\s*Nome: (.+?)\s*-\s*Status: (.+)/;
             const match = linha.match(regex);
             
@@ -50,12 +46,10 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
             mensagemElement.innerHTML = `<span class="icon material-icons">check_circle</span> <div class="text-content"><p class="title">Relatório Gerado!</p><p class="details">Foram encontrados ${parsedCount} acessos.</p></div>`;
             mensagemElement.classList.add('success');
         } else {
-            // Se nenhuma linha correspondeu, o formato do arquivo está incorreto
             mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Formato</p><p class="details">O conteúdo do arquivo de relatório não pôde ser lido corretamente.</p></div>`;
             mensagemElement.classList.add('error');
             btnVerBruto.style.display = 'block';
             
-            // Evento para o novo botão de depuração
             btnVerBruto.onclick = () => {
                 rawContentElement.textContent = relatorio;
                 rawContentElement.style.display = 'block';
@@ -90,7 +84,6 @@ document.getElementById('btnZerarRelatorio').addEventListener('click', async () 
         if (response.ok) {
             mensagemDiv.innerHTML = `<span class="icon material-icons">check_circle</span> <div class="text-content"><p class="title">Relatório Zerado!</p><p class="details">O relatório diário foi zerado com sucesso.</p></div>`;
             mensagemDiv.classList.add('success');
-            // Limpa a tabela após zerar
             document.querySelector('#relatorioTable tbody').innerHTML = '';
         } else {
             const errorText = await response.text();
