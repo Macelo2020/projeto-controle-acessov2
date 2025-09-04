@@ -28,8 +28,8 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
         let parsedCount = 0;
 
         linhas.forEach(linha => {
-            // Regex mais flexível para lidar com diferentes espaços e caracteres invisíveis
-            const regex = /(.+?)\s*-\s*Matrícula: (\d+)\s*-\s*Nome: (.+?)\s*-\s*Status: (.+)/;
+            // Nova regex para capturar a data com os colchetes
+            const regex = /\[(.+?)\]\s*-\s*Matrícula: (\d+)\s*-\s*Nome: (.+?)\s*-\s*Status: (.+)/;
             const match = linha.match(regex);
             
             if (match) {
