@@ -187,7 +187,21 @@ app.post('/verificar-acesso', async (req, res) => {
 // Rota GET para gerar o relatório diário
 app.get('/relatorio-diario', async (req, res) => {
     try {
-        const acessos = await Acesso.find({}).sort({ data_acesso: 1 });
+        // Pega a data de hoje e define o início e o fim do dia
+        const inicioDoDia = new Date();
+        inicioDoDia.setHours(0, 0, 0, 0);
+
+        const fimDoDia = new Date();
+        fimDoDia.setHours(23, 59, 59, 999);
+
+        // Busca os acessos do banco de dados para o dia atual
+        const acessos = await Acesso.find({
+            data_acesso: {
+                $gte: inicioDoDia,
+                $lt: fimDoDia
+            }
+        }).sort({ data_acesso: 1 });
+
         if (acessos.length === 0) {
             return res.status(204).send(); // 204 No Content para indicar que não há dados
         }
