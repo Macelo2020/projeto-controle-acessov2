@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Conexão com o MongoDB
-const uri = process.env.MONGODB_URI; // <-- ATUALIZE AQUI
+const uri = process.env.MONGODB_URI;
 mongoose.connect(uri)
     .then(() => console.log('Conectado ao MongoDB!'))
     .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
