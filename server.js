@@ -166,22 +166,39 @@ app.use(express.json());
 // Rota POST para verificar a matrícula
 app.post('/verificar-acesso', async (req, res) => {
     const { matricula } = req.body;
+    let status = 'negado';
+    let mensagem = 'Matrícula não cadastrada.';
+    let nome = 'Desconhecido';
+
     const funcionario = listaDeFuncionarios.find(f => f.matricula === matricula);
 
-    if (!funcionario) {
-        await registrarAcesso(matricula, 'Desconhecido', 'negado');
-        res.status(401).json({ mensagem: 'Acesso negado. Matrícula não encontrada.' });
-        return;
+    if (funcionario) {
+        status = 'aprovado';
+        mensagem = 'Acesso Aprovado!';
+        nome = funcionario.nome;
+    } else {
+        status = 'negado';
+        mensagem = 'Acesso Negado!';
+        nome = 'Não Encontrado';
     }
 
-    if (await jaAcessouHoje(matricula)) {
-        await registrarAcesso(matricula, funcionario.nome, 'negado (acesso duplicado)');
-        res.status(403).json({ mensagem: `${funcionario.nome}, você já verificou seu acesso hoje.` });
-        return;
-    }
+    try {
+        // Cria uma nova instância do modelo Acesso
+        const novoAcesso = new Acesso({
+            matricula,
+            nome,
+            status,
+            data_acesso: new Date() // Salva a data e hora do acesso
+        });
 
-    await registrarAcesso(matricula, funcionario.nome, 'concedido');
-    res.status(200).json({ mensagem: 'Acesso concedido. Bem-vindo, ', nome: funcionario.nome, status: 'aprovado' });
+        // Salva o novo registro no banco de dados
+        await novoAcesso.save();
+
+        res.json({ status, mensagem, nome });
+    } catch (erro) {
+        console.error('Erro ao registrar o acesso no banco de dados:', erro);
+        res.status(500).send('Erro interno do servidor ao registrar o acesso.');
+    }
 });
 
 // Rota GET para gerar o relatório diário
