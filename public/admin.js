@@ -1,11 +1,16 @@
 document.getElementById('btnGerarRelatorio').addEventListener('click', async () => {
     const mensagemElement = document.getElementById('adminMessage');
     const tableBody = document.querySelector('#relatorioTable tbody');
+    const btnVerBruto = document.getElementById('btnVerBruto');
+    const rawContentElement = document.getElementById('rawContent');
 
-    // Limpa mensagens e tabela anteriores
+    // Limpa mensagens, tabela e botão de depuração anteriores
     mensagemElement.innerHTML = '';
     mensagemElement.className = 'message-area';
     tableBody.innerHTML = '';
+    btnVerBruto.style.display = 'none';
+    rawContentElement.style.display = 'none';
+    rawContentElement.textContent = '';
 
     try {
         const resposta = await fetch('/relatorio-diario');
@@ -23,7 +28,7 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
         let parsedCount = 0;
 
         linhas.forEach(linha => {
-            // Regex para capturar os dados da linha
+            // Regex mais flexível para lidar com diferentes espaços
             const regex = /(.+) - Matrícula: (\d+) - Nome: (.+) - Status: (.+)/;
             const match = linha.match(regex);
             
@@ -48,6 +53,14 @@ document.getElementById('btnGerarRelatorio').addEventListener('click', async () 
             // Se nenhuma linha correspondeu, o formato do arquivo está incorreto
             mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Formato</p><p class="details">O conteúdo do arquivo de relatório não pôde ser lido corretamente.</p></div>`;
             mensagemElement.classList.add('error');
+            btnVerBruto.style.display = 'block';
+            
+            // Evento para o novo botão de depuração
+            btnVerBruto.onclick = () => {
+                rawContentElement.textContent = relatorio;
+                rawContentElement.style.display = 'block';
+                btnVerBruto.style.display = 'none';
+            };
         }
 
     } catch (erro) {
