@@ -33,7 +33,7 @@ document.getElementById('acessoForm').addEventListener('submit', async function(
                 <span class="icon material-icons">check_circle</span>
                 <div class="text-content">
                     <p class="title">Acesso Concedido.</p>
-                    <p class="details">Bem-vindo, ${data.nome}</p>
+                    <p class="details">Bom apetite, ${data.nome}</p>
                     <p class="details">Acesso realizado em: ${dataHoraAcesso}</p>
                 </div>
             `;
