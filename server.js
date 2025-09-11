@@ -181,7 +181,7 @@ app.post('/verificar-acesso', async (req, res) => {
     }
 
     await registrarAcesso(matricula, funcionario.nome, 'concedido');
-    res.status(200).json({ mensagem: 'Acesso concedido. Bem-vindo, ', nome: funcionario.nome, status: 'aprovado' });
+    res.status(200).json({ mensagem: 'Acesso concedido. Bom apetite!, ', nome: funcionario.nome, status: 'aprovado' });
 });
 
 // Rota GET para gerar o relatório diário
