@@ -1,4 +1,4 @@
-# Projeto: Sistema de Controle de Acesso ao Refeitório
+# Projeto: Sistema de Controle de Acesso ao Refeitório Versão 2.0
 
 ## Descrição do Projeto
 
