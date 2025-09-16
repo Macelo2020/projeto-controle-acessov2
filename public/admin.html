@@ -6,6 +6,28 @@
     <title>Painel de Administração</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        /* Estilos adicionais para aprimorar a tabela */
+        .admin-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #searchInput {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            flex-grow: 1;
+        }
+        .acesso-concedido {
+            background-color: #d4edda; /* Verde claro */
+        }
+        .acesso-negado {
+            background-color: #f8d7da; /* Vermelho claro */
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -28,9 +50,7 @@
                 <button id="btnZerarRelatorio">
                     <span class="material-icons">delete_forever</span> Zerar Relatório Diário
                 </button>
-                <button id="btnVerBruto" style="display:none;">
-                    <span class="material-icons">code</span> Ver Conteúdo Bruto
-                </button>
+                <input type="text" id="searchInput" placeholder="Pesquisar por Matrícula, Nome ou Status...">
             </div>
 
             <div id="relatorioTexto">
@@ -46,11 +66,10 @@
                             </tr>
                         </thead>
                         <tbody>
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
             </div>
-            <pre id="rawContent" style="display:none; text-align: left; padding: 15px; background: #f4f4f4; border: 1px dashed #ccc; margin-top: 20px;"></pre>
         </main>
 
         <footer class="developer-logo-area">

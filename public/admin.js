@@ -1,105 +1,101 @@
-document.getElementById('btnGerarRelatorio').addEventListener('click', async () => {
-    const mensagemElement = document.getElementById('adminMessage');
-    const tableBody = document.querySelector('#relatorioTable tbody');
-    const btnVerBruto = document.getElementById('btnVerBruto');
-    const rawContentElement = document.getElementById('rawContent');
+document.addEventListener('DOMContentLoaded', () => {
+    const btnGerarRelatorio = document.getElementById('btnGerarRelatorio');
+    const btnBaixarRelatorio = document.getElementById('btnBaixarRelatorio');
+    const btnZerarRelatorio = document.getElementById('btnZerarRelatorio');
+    const relatorioTableBody = document.querySelector('#relatorioTable tbody');
+    const adminMessage = document.getElementById('adminMessage');
+    const searchInput = document.getElementById('searchInput'); // Novo campo de pesquisa
+    let registrosGlobais = []; // Armazenará todos os registros para filtrar
 
-    // Limpa mensagens, tabela e botão de depuração anteriores
-    mensagemElement.innerHTML = '';
-    mensagemElement.className = 'message-area';
-    tableBody.innerHTML = '';
-    btnVerBruto.style.display = 'none';
-    rawContentElement.style.display = 'none';
-    rawContentElement.textContent = '';
+    // Função para mostrar mensagens de status
+    const showMessage = (msg, isError = false) => {
+        adminMessage.textContent = msg;
+        adminMessage.style.color = isError ? '#d9534f' : '#5cb85c';
+        adminMessage.style.display = 'block';
+    };
 
-    try {
-        const resposta = await fetch('/relatorio-diario');
-        const relatorio = await resposta.text();
-        
-        // Verifica se o relatório está vazio
-        if (relatorio.trim() === '') {
-            mensagemElement.innerHTML = `<span class="icon material-icons">info</span> <div class="text-content"><p class="title">Relatório Vazio</p><p class="details">Não há acessos registrados para hoje.</p></div>`;
-            mensagemElement.classList.add('error');
+    // Função para renderizar os dados na tabela
+    const renderTable = (registros) => {
+        relatorioTableBody.innerHTML = ''; // Limpa a tabela
+        if (registros.length === 0) {
+            showMessage('Nenhum acesso encontrado com o filtro aplicado.');
             return;
         }
 
-        // Divide o relatório em linhas e processa cada uma
-        const linhas = relatorio.trim().split('\n');
-        let parsedCount = 0;
-
-        linhas.forEach(linha => {
-            // Nova regex para capturar a data com os colchetes
-            const regex = /\[(.+?)\]\s*-\s*Matrícula: (\d+)\s*-\s*Nome: (.+?)\s*-\s*Status: (.+)/;
-            const match = linha.match(regex);
-            
-            if (match) {
-                const [_, dataHora, matricula, nome, status] = match;
-                const newRow = document.createElement('tr');
-                newRow.innerHTML = `
-                    <td>${dataHora}</td>
-                    <td>${matricula}</td>
-                    <td>${nome}</td>
-                    <td><span class="status ${status.toLowerCase()}">${status}</span></td>
-                `;
-                tableBody.appendChild(newRow);
-                parsedCount++;
-            }
+        registros.forEach(registro => {
+            const row = document.createElement('tr');
+            const dataHora = new Date(registro.dataHora).toLocaleString('pt-BR');
+            // Adicione uma classe para o estilo de acordo com o status
+            row.classList.add(registro.status === 'concedido' ? 'acesso-concedido' : 'acesso-negado');
+            row.innerHTML = `
+                <td>${dataHora}</td>
+                <td>${registro.matricula}</td>
+                <td>${registro.nome}</td>
+                <td>${registro.status}</td>
+            `;
+            relatorioTableBody.appendChild(row);
         });
+        showMessage(`Relatório diário carregado com sucesso! Total: ${registros.length} acessos.`, false);
+    };
 
-        if (parsedCount > 0) {
-            mensagemElement.innerHTML = `<span class="icon material-icons">check_circle</span> <div class="text-content"><p class="title">Relatório Gerado!</p><p class="details">Foram encontrados ${parsedCount} acessos.</p></div>`;
-            mensagemElement.classList.add('success');
-        } else {
-            // Se nenhuma linha correspondeu, o formato do arquivo está incorreto
-            mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Formato</p><p class="details">O conteúdo do arquivo de relatório não pôde ser lido corretamente.</p></div>`;
-            mensagemElement.classList.add('error');
-            btnVerBruto.style.display = 'block';
-            
-            // Evento para o novo botão de depuração
-            btnVerBruto.onclick = () => {
-                rawContentElement.textContent = relatorio;
-                rawContentElement.style.display = 'block';
-                btnVerBruto.style.display = 'none';
-            };
+    // Função para buscar e exibir o relatório completo
+    const fetchAndDisplayReport = async () => {
+        try {
+            const response = await fetch('/api/admin/relatorio');
+            registrosGlobais = await response.json(); // Armazena os dados
+            renderTable(registrosGlobais); // Renderiza a tabela completa
+        } catch (error) {
+            console.error('Erro ao buscar o relatório:', error);
+            showMessage('Erro ao carregar o relatório.', true);
         }
+    };
 
-    } catch (erro) {
-        mensagemElement.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Conexão!</p><p class="details">Não foi possível se conectar ao servidor.</p></div>`;
-        mensagemElement.classList.add('error');
-    }
-});
+    // Função de filtro
+    const filterData = () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        const filteredRegistros = registrosGlobais.filter(registro => {
+            return (
+                registro.matricula.toLowerCase().includes(searchTerm) ||
+                registro.nome.toLowerCase().includes(searchTerm) ||
+                registro.status.toLowerCase().includes(searchTerm)
+            );
+        });
+        renderTable(filteredRegistros);
+    };
 
-document.getElementById('btnBaixarRelatorio').addEventListener('click', () => {
-    window.location.href = '/baixar-relatorio';
-});
+    // Event Listeners
+    btnGerarRelatorio.addEventListener('click', fetchAndDisplayReport);
+    btnBaixarRelatorio.addEventListener('click', () => {
+        window.location.href = '/api/admin/baixar-relatorio';
+    });
+    btnZerarRelatorio.addEventListener('click', async () => {
+        const senha = prompt("Digite a senha para zerar o relatório:");
+        if (senha) {
+            try {
+                const response = await fetch('/api/admin/zerar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ senha })
+                });
 
-document.getElementById('btnZerarRelatorio').addEventListener('click', async () => {
-    const senha = prompt("Digite a senha de administrador para zerar o relatório:");
-    if (senha === null || senha === "") {
-        return;
-    }
-    
-    const mensagemDiv = document.getElementById('adminMessage');
-    
-    try {
-        const response = await fetch(`/admin2/zerar?senha=${senha}`);
-        
-        mensagemDiv.innerHTML = '';
-        mensagemDiv.className = 'message-area';
-
-        if (response.ok) {
-            mensagemDiv.innerHTML = `<span class="icon material-icons">check_circle</span> <div class="text-content"><p class="title">Relatório Zerado!</p><p class="details">O relatório diário foi zerado com sucesso.</p></div>`;
-            mensagemDiv.classList.add('success');
-            // Limpa a tabela após zerar
-            document.querySelector('#relatorioTable tbody').innerHTML = '';
-        } else {
-            const errorText = await response.text();
-            mensagemDiv.innerHTML = `<span class="icon material-icons">cancel</span> <div class="text-content"><p class="title">Erro ao Zerar!</p><p class="details">${errorText}</p></div>`;
-            mensagemDiv.classList.add('error');
+                const mensagem = await response.text();
+                if (response.ok) {
+                    showMessage(mensagem, false);
+                    relatorioTableBody.innerHTML = ''; // Limpa a tabela
+                    registrosGlobais = []; // Limpa os dados
+                } else {
+                    showMessage(mensagem, true);
+                }
+            } catch (error) {
+                console.error('Erro ao zerar o relatório:', error);
+                showMessage('Erro ao tentar zerar o relatório.', true);
+            }
         }
-    } catch (error) {
-        console.error('Erro ao comunicar com o servidor:', error);
-        mensagemDiv.innerHTML = `<span class="icon material-icons">warning</span> <div class="text-content"><p class="title">Erro de Conexão!</p><p class="details">Não foi possível se conectar ao servidor.</p></div>`;
-        mensagemDiv.classList.add('error');
-    }
+    });
+
+    // Adiciona o listener para a pesquisa
+    searchInput.addEventListener('input', filterData);
+
+    // Carrega o relatório automaticamente ao abrir a página
+    fetchAndDisplayReport();
 });
